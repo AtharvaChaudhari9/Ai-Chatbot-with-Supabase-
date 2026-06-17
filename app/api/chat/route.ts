@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { chatId, prompt } = await request.json();
+    const { chatId, prompt, model, localUrl, localModel } = await request.json();
     if (!chatId || !prompt) {
       return NextResponse.json({ error: 'Missing chatId or prompt' }, { status: 400 });
     }
@@ -57,11 +57,81 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to save user message' }, { status: 500 });
     }
 
-    // Call Gemini API with complete chat history
-    const aiResponse = await generateGeminiResponse(
-      messages || [],
-      prompt
-    );
+    // Perform semantic search (RAG) context retrieval if documents exist for this chat session
+    let enrichedPrompt = prompt;
+    try {
+      const { count, error: countError } = await supabase
+        .from('document_chunks')
+        .select('*', { count: 'exact', head: true })
+        .eq('chat_id', chatId)
+        .eq('user_id', user.id);
+
+      if (!countError && count && count > 0) {
+        // Generate embedding for the user query using Python backend
+        const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
+        const embedRes = await fetch(`${pythonBackendUrl}/api/embeddings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: prompt }),
+        });
+
+        if (!embedRes.ok) {
+          throw new Error(`Python embedding service returned status ${embedRes.status}`);
+        }
+
+        const embedData = await embedRes.json();
+        const queryEmbedding = embedData.embedding;
+        if (queryEmbedding) {
+          // Query database via pgvector match function RPC
+          const { data: matchedChunks, error: matchError } = await supabase.rpc(
+            'match_document_chunks',
+            {
+              query_embedding: queryEmbedding,
+              match_threshold: 0.2, // Similarity threshold
+              match_count: 5,       // Top 5 chunks
+              filter_chat_id: chatId,
+              filter_user_id: user.id,
+            }
+          );
+
+          if (!matchError && matchedChunks && matchedChunks.length > 0) {
+            const contextText = matchedChunks
+              .map((c: any) => `[Document Chunk]:\n${c.content}`)
+              .join('\n\n');
+
+            enrichedPrompt = `You are a helpful assistant. Use the following retrieved document context chunks to answer the user's question. If you cannot find the answer in the provided context, answer using your general knowledge but clearly state that the information was not in the provided documents.
+
+Retrieved Context Chunks:
+---
+${contextText}
+---
+
+User Question: ${prompt}`;
+          }
+        }
+      }
+    } catch (ragErr) {
+      console.warn('RAG Context retrieval failed, falling back to standard prompt:', ragErr);
+    }
+
+    // Call Gemini or Local LLM based on selection
+    let aiResponse: string;
+    if (model === 'local') {
+      const { generateLocalLLMResponse } = await import('@/lib/local-llm');
+      aiResponse = await generateLocalLLMResponse(
+        messages || [],
+        enrichedPrompt,
+        localUrl,
+        localModel
+      );
+    } else {
+      aiResponse = await generateGeminiResponse(
+        messages || [],
+        enrichedPrompt
+      );
+    }
 
     // Save AI response to database
     const { error: assistantMsgError } = await supabase

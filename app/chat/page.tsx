@@ -4,6 +4,7 @@ import React, { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSidebar } from './LayoutClient';
 import PromptInput from '@/components/PromptInput';
+import ModelSelector from '@/components/ModelSelector';
 import { Sparkles, Compass, PenTool, Code, Menu, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -28,12 +29,13 @@ const SUGGESTIONS = [
   }
 ];
 
+
 export default function ChatLandingPage() {
   const router = useRouter();
   const { toggle } = useSidebar();
   const [isPending, startTransition] = useTransition();
 
-  const handleStartConversation = (text: string) => {
+  const handleStartConversation = (text: string, file?: File) => {
     startTransition(async () => {
       try {
         const supabase = createClient();
@@ -54,6 +56,20 @@ export default function ChatLandingPage() {
           throw new Error(error?.message || 'Failed to create chat');
         }
 
+        // Upload the file if provided
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('chatId', chat.id);
+          const response = await fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          if (!response.ok) {
+            console.error('Failed to upload landing page document');
+          }
+        }
+
         // Redirect to the chat page with the prompt query parameter
         router.push(`/chat/${chat.id}?prompt=${encodeURIComponent(text)}`);
         router.refresh();
@@ -65,8 +81,7 @@ export default function ChatLandingPage() {
 
   return (
     <div className="flex flex-1 flex-col h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden relative">
-      
-      {/* Top Header */}
+
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-900 bg-neutral-950/80 px-4 md:px-6 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
           <button
@@ -82,6 +97,7 @@ export default function ChatLandingPage() {
             </h2>
           </div>
         </div>
+        <ModelSelector />
       </header>
 
       {/* Main dashboard content */}

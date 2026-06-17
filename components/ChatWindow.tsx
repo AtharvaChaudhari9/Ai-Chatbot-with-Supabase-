@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import PromptInput from './PromptInput';
-import { Menu, Sparkles, Loader2, Compass, PenTool, Code, AlertCircle } from 'lucide-react';
+import { Menu, Sparkles, Loader2, Compass, PenTool, Code, AlertCircle, FileText, Trash2, Activity } from 'lucide-react';
+import { useModel } from '@/app/chat/LayoutClient';
+import ModelSelector from './ModelSelector';
+import OcrBenchmarkModal from './OcrBenchmarkModal';
 
 interface Message {
   id: string;
@@ -41,12 +44,64 @@ const SUGGESTIONS = [
   }
 ];
 
+interface DocumentMeta {
+  id: string;
+  name: string;
+  mime_type: string;
+  storage_path: string;
+  created_at: string;
+}
+
 export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuToggle, initialPrompt }: ChatWindowProps) {
+  const { model, localUrl, localModel } = useModel();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // RAG document state
+  const [activeDocuments, setActiveDocuments] = useState<DocumentMeta[]>([]);
+  const [isDocsLoading, setIsDocsLoading] = useState(false);
+  const [benchmarkDoc, setBenchmarkDoc] = useState<DocumentMeta | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasTriggeredPrompt = useRef(false);
+
+  const fetchDocuments = async () => {
+    if (!chatId) return;
+    setIsDocsLoading(true);
+    try {
+      const response = await fetch(`/api/documents/list?chatId=${chatId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setActiveDocuments(data.documents || []);
+      }
+    } catch (err) {
+      console.error('Failed to load active documents list:', err);
+    } finally {
+      setIsDocsLoading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    try {
+      const response = await fetch('/api/documents/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documentId: docId }),
+      });
+      if (response.ok) {
+        fetchDocuments();
+      } else {
+        const data = await response.json();
+        alert(`Failed to delete document: ${data.error}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error deleting document: ${err.message}`);
+    }
+  };
 
   // Sync state if chatId changes
   useEffect(() => {
@@ -54,6 +109,9 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
     setError(null);
     setIsLoading(false);
     hasTriggeredPrompt.current = false;
+
+    // Fetch documents on chat change
+    fetchDocuments();
   }, [chatId, initialMessages]);
 
   // Scroll to bottom helper
@@ -80,7 +138,7 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
     }
   }, [initialPrompt]);
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, file?: File) => {
     if (isLoading) return;
     setError(null);
 
@@ -103,7 +161,10 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
         },
         body: JSON.stringify({
           chatId,
-          prompt: text
+          prompt: text,
+          model,
+          localUrl,
+          localModel
         })
       });
 
@@ -132,7 +193,7 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
 
   return (
     <div className="flex flex-1 flex-col h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden relative">
-      
+
       {/* Top Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-900 bg-neutral-950/80 px-4 md:px-6 backdrop-blur-md z-10">
         <div className="flex items-center gap-3 min-w-0">
@@ -149,10 +210,11 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
             </h2>
             <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Gemini 2.5 Flash</span>
+              <span>{model === 'local' ? `Local LLM (${localModel})` : 'Gemini 2.5 Flash'}</span>
             </div>
           </div>
         </div>
+        <ModelSelector />
       </header>
 
       {/* Messages Scroll Area */}
@@ -163,7 +225,7 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg mb-6 ring-4 ring-indigo-950/50">
               <Sparkles className="w-7 h-7 text-white" />
             </div>
-            
+
             <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent mb-2">
               How can I help you today?
             </h1>
@@ -212,7 +274,7 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
                 <div className="flex flex-col w-[75%] items-start">
                   <div className="flex items-center gap-2 rounded-2xl bg-neutral-900 border border-neutral-850 px-4 py-3.5 shadow-sm">
                     <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                    <span className="text-xs text-neutral-400 font-medium">Gemini is thinking...</span>
+                    <span className="text-xs text-neutral-400 font-medium">{model === 'local' ? `${localModel} is thinking...` : 'Gemini is thinking...'}</span>
                   </div>
                 </div>
               </div>
@@ -233,12 +295,65 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
       {/* Input container */}
       <footer className="shrink-0 p-4 md:p-6 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent">
         <div className="max-w-3xl mx-auto">
-          <PromptInput onSend={handleSendMessage} disabled={isLoading} />
+
+          {/* Active vector documents library bar */}
+          {activeDocuments.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2 items-center px-1">
+              <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mr-1 select-none">
+                Active Knowledge:
+              </span>
+              {activeDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 font-medium max-w-[200px]"
+                >
+                  <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="truncate max-w-[120px] mr-1" title={doc.name}>
+                    {doc.name}
+                  </span>
+                  {/* Secondary Benchmark OCR Button */}
+                  <button
+                    onClick={() => setBenchmarkDoc(doc)}
+                    className="p-0.5 rounded-md text-neutral-500 hover:text-indigo-400 hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
+                    title="Benchmark OCR / Extraction Engines"
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDocument(doc.id)}
+                    className="p-0.5 rounded-md text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
+                    title="Remove from knowledge base"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <PromptInput
+            onSend={handleSendMessage}
+            disabled={isLoading}
+            chatId={chatId}
+            onUploadSuccess={fetchDocuments}
+          />
           <div className="mt-2 text-center text-[10px] text-neutral-600">
-            Gemini can make mistakes. Consider checking important information.
+            {model === 'local' ? `${localModel} can make mistakes. Consider checking important information.` : 'Gemini can make mistakes. Consider checking important information.'}
           </div>
         </div>
       </footer>
+
+      {/* OCR Benchmarking Modal Container */}
+      {benchmarkDoc && (
+        <OcrBenchmarkModal
+          documentId={benchmarkDoc.id}
+          storagePath={benchmarkDoc.storage_path}
+          documentName={benchmarkDoc.name}
+          chatId={chatId}
+          onClose={() => setBenchmarkDoc(null)}
+          onBenchmarkComplete={fetchDocuments}
+        />
+      )}
 
     </div>
   );

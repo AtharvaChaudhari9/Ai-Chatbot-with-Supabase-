@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+supabase
+pymupdf
+surya-ocr
+pillow
+httpx
+python-dotenv
+psutil
+
