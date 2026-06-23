@@ -42,6 +42,25 @@ export async function POST(request: Request) {
       console.warn('Storage removal failed or file already deleted:', removeStorageError);
     }
 
+    // Call Python backend to delete chunks from Qdrant vector store
+    try {
+      const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
+      const deleteQdrantRes = await fetch(`${pythonBackendUrl}/api/delete-document`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ document_id: documentId }),
+      });
+      if (!deleteQdrantRes.ok) {
+        console.warn(`Qdrant deletion failed in FastAPI backend with status ${deleteQdrantRes.status}`);
+      } else {
+        console.log(`Successfully synced deletion with Qdrant for document: ${documentId}`);
+      }
+    } catch (qdErr) {
+      console.error('Failed to communicate document deletion to FastAPI backend:', qdErr);
+    }
+
     // 5. Delete document metadata row (cascade will delete associated chunks)
     const { error: deleteError } = await supabase
       .from('documents')

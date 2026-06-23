@@ -90,8 +90,8 @@ async def save_document_chunks(chunks: List[str], embeddings: List[List[float]],
             "document_id": document_id,
             "chat_id": chat_id,
             "user_id": user_id,
-            "content": content,
-            "embedding": embeddings[idx]
+            "content": content
+            # embedding column is omitted to migrate vector storage solely to Qdrant
         })
         
     try:

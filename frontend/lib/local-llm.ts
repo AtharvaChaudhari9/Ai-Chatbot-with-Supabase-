@@ -24,7 +24,10 @@ export async function generateLocalLLMResponse(
     },
   ];
 
-  const targetUrl = url?.trim() || process.env.LOCAL_LLM_URL || 'http://127.0.0.1:11434';
+  let targetUrl = url?.trim() || process.env.LOCAL_LLM_URL || 'http://127.0.0.1:11434';
+  if ((targetUrl.includes('127.0.0.1') || targetUrl.includes('localhost')) && process.env.LOCAL_LLM_URL) {
+    targetUrl = process.env.LOCAL_LLM_URL;
+  }
   const targetModel = modelName?.trim() || process.env.LOCAL_LLM_MODEL || 'llama3.2';
 
   try {

@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const targetUrl = searchParams.get('url')?.trim() || 'http://127.0.0.1:11434';
+  let targetUrl = searchParams.get('url')?.trim() || 'http://127.0.0.1:11434';
+  if ((targetUrl.includes('127.0.0.1') || targetUrl.includes('localhost')) && process.env.LOCAL_LLM_URL) {
+    targetUrl = process.env.LOCAL_LLM_URL;
+  }
 
   try {
     const res = await fetch(`${targetUrl}/api/tags`, {

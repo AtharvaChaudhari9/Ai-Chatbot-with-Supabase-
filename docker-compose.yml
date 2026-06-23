@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  frontend:
+    container_name: ai-chatbot-frontend
+    image: ai-chatbot/frontend:latest
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    ports:
+      - "3000:3000"
+    environment:
+      - PYTHON_BACKEND_URL=http://backend:8000
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LOCAL_LLM_URL=http://ollama:11434
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    container_name: ai-chatbot-backend
+    image: ai-chatbot/backend:latest
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - qdrant
+      - ollama
+    restart: unless-stopped
+
+  qdrant:
+    container_name: ai-chatbot-qdrant
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  ollama:
+    container_name: ai-chatbot-ollama
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:
+    name: qdrant_storage
+  ollama_models:
+    name: ollama_models

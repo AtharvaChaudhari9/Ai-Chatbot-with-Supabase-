@@ -8,4 +8,4 @@ pillow
 httpx
 python-dotenv
 psutil
-
+qdrant-client

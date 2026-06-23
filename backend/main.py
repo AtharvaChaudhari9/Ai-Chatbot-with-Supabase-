@@ -39,6 +39,31 @@ app.include_router(document_routes.router, prefix="/api")
 app.include_router(embedding_routes.router, prefix="/api")
 app.include_router(benchmark_routes.router, prefix="/api")
 
+@app.on_event("startup")
+async def startup_event():
+    logger.info("FastAPI starting up. Running validation checks...")
+    try:
+        from services.embeddings import EmbeddingService
+        from services.qdrant_service import QdrantService
+        
+        # 1. Dynamic embedding dimension detection
+        embedding_service = EmbeddingService()
+        try:
+            logger.info("Detecting active embedding model dimension from Ollama...")
+            test_vector = await embedding_service.get_embedding("test")
+            vector_size = len(test_vector)
+            logger.info(f"Ollama connection successful. Active model: '{embedding_service.model}' with dimension: {vector_size}")
+        except Exception as embed_err:
+            logger.warning(f"Could not connect to Ollama or generate embedding dynamically: {embed_err}. Defaulting vector size to 768.")
+            vector_size = 768
+            
+        # 2. Qdrant Connection and Collection Verification
+        qdrant_service = QdrantService()
+        qdrant_service.recreate_or_ensure_collection(vector_size)
+        logger.info("Qdrant startup validation succeeded. Connection verified and collection is ready.")
+    except Exception as qd_err:
+        logger.error(f"Qdrant startup validation failed: {qd_err}. Please ensure Qdrant is running at the configured endpoint.", exc_info=True)
+
 @app.get("/")
 def read_root():
     return {
@@ -50,4 +75,4 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     # Use reload in development mode. Port 8000 is default.
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
