@@ -37,13 +37,21 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
       return;
     }
 
-    // Validate supported formats (PDF and text-based)
+    // Validate supported formats (PDF, text-based, Word, Excel)
     const isPDF = file.type === 'application/pdf';
+    const isOffice = /\.(docx|doc|xlsx|xls|csv)$/i.test(file.name) ||
+                     [
+                       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                       'application/msword',
+                       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       'application/vnd.ms-excel',
+                       'text/csv'
+                     ].includes(file.type);
     const isText = file.type.startsWith('text/') || 
-                   /\.(txt|md|js|jsx|ts|tsx|py|csv|json|html|css|json)$/i.test(file.name);
+                   /\.(txt|md|js|jsx|ts|tsx|py|json|html|css)$/i.test(file.name);
 
-    if (!isPDF && !isText) {
-      alert('Unsupported file format. Please upload a PDF or text-based document (txt, md, js, py, etc.).');
+    if (!isPDF && !isText && !isOffice) {
+      alert('Unsupported file format. Please upload a PDF, Word (docx), Excel (xlsx), CSV, or text-based document.');
       return;
     }
 
@@ -179,7 +187,7 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".pdf,text/*,.js,.ts,.tsx,.jsx,.py,.csv,.json,.html,.css"
+        accept=".pdf,text/*,.js,.ts,.tsx,.jsx,.py,.csv,.json,.html,.css,.docx,.doc,.xlsx,.xls"
       />
 
       {/* Local selected file preview (Landing Page) */}

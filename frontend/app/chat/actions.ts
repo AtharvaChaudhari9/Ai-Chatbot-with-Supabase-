@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-export async function createChat() {
+export async function createChat(agentId?: string) {
   const supabase = await createClient();
 
   const {
@@ -16,11 +16,14 @@ export async function createChat() {
     throw new Error('Unauthorized');
   }
 
+  let title = 'New Chat';
+
   const { data, error } = await supabase
     .from('chats')
     .insert({
       user_id: user.id,
-      title: 'New Chat',
+      title,
+      agent_id: agentId || null,
     })
     .select('id')
     .single();

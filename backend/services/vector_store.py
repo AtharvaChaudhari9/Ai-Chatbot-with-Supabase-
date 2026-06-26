@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from supabase import create_client, Client
 # Try importing ClientOptions from different namespaces to ensure maximum compatibility
 try:
@@ -73,7 +73,7 @@ async def download_file_from_storage(storage_path: str, auth_token: str = None) 
         logger.error(f"Failed to download file {storage_path} from storage: {e}")
         raise RuntimeError(f"Failed to download file from Supabase Storage: {str(e)}") from e
 
-async def save_document_chunks(chunks: List[str], embeddings: List[List[float]], document_id: str, chat_id: str, user_id: str, auth_token: str = None) -> int:
+async def save_document_chunks(chunks: List[str], embeddings: List[List[float]], document_id: str, chat_id: Optional[str], user_id: str, agent_id: Optional[str] = None, auth_token: str = None) -> int:
     """
     Inserts chunks and vector embeddings into the 'document_chunks' table.
     """
@@ -89,6 +89,7 @@ async def save_document_chunks(chunks: List[str], embeddings: List[List[float]],
         chunk_inserts.append({
             "document_id": document_id,
             "chat_id": chat_id,
+            "agent_id": agent_id,
             "user_id": user_id,
             "content": content
             # embedding column is omitted to migrate vector storage solely to Qdrant

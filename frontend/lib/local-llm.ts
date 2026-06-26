@@ -10,10 +10,20 @@ export async function generateLocalLLMResponse(
   history: ChatMessage[],
   currentPrompt: string,
   url?: string,
-  modelName?: string
+  modelName?: string,
+  systemInstruction?: string
 ) {
-  // Map messages to Ollama chat format
-  const messages = [
+  // Map messages to Ollama chat format, prepending system prompt if available
+  const messages: any[] = [];
+  
+  if (systemInstruction) {
+    messages.push({
+      role: 'system',
+      content: systemInstruction,
+    });
+  }
+  
+  messages.push(
     ...history.map((msg) => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
       content: msg.content,
@@ -21,8 +31,8 @@ export async function generateLocalLLMResponse(
     {
       role: 'user',
       content: currentPrompt,
-    },
-  ];
+    }
+  );
 
   let targetUrl = url?.trim() || process.env.LOCAL_LLM_URL || 'http://127.0.0.1:11434';
   if ((targetUrl.includes('127.0.0.1') || targetUrl.includes('localhost')) && process.env.LOCAL_LLM_URL) {

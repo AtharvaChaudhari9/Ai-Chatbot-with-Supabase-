@@ -3,6 +3,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { usePathname } from 'next/navigation';
+import AgentModal from '@/components/AgentModal';
 
 interface SidebarContextType {
   isOpen: boolean;
@@ -38,6 +39,20 @@ const ModelContext = createContext<ModelContextType>({
 
 export const useModel = () => useContext(ModelContext);
 
+interface AgentContextType {
+  agents: any[];
+  refreshAgents: () => void;
+  openAgentModal: (agentId?: string | null) => void;
+}
+
+const AgentContext = createContext<AgentContextType>({
+  agents: [],
+  refreshAgents: () => {},
+  openAgentModal: () => {},
+});
+
+export const useAgent = () => useContext(AgentContext);
+
 export default function ChatLayoutClient({
   chats,
   userEmail,
@@ -52,11 +67,32 @@ export default function ChatLayoutClient({
   const [localUrl, setLocalUrlVal] = useState('http://127.0.0.1:11434');
   const [localModel, setLocalModelVal] = useState('llama3.2');
 
+  const [agents, setAgents] = useState<any[]>([]);
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [editAgentId, setEditAgentId] = useState<string | null>(null);
+
   const pathname = usePathname();
   const pathParts = pathname.split('/');
   const currentChatId = pathParts[2]; // e.g., /chat/[id]
 
   const toggle = () => setSidebarOpen((prev) => !prev);
+
+  const refreshAgents = async () => {
+    try {
+      const response = await fetch('/api/agents');
+      if (response.ok) {
+        const data = await response.json();
+        setAgents(data.agents || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch agents in layout:', err);
+    }
+  };
+
+  const openAgentModal = (agentId?: string | null) => {
+    setEditAgentId(agentId || null);
+    setAgentModalOpen(true);
+  };
 
   // Safely initialize values from localStorage on mount
   useEffect(() => {
@@ -72,6 +108,8 @@ export default function ChatLayoutClient({
     if (savedModelName) {
       setLocalModelVal(savedModelName);
     }
+    
+    refreshAgents();
   }, []);
 
   const setModel = (val: ModelType) => {
@@ -92,18 +130,26 @@ export default function ChatLayoutClient({
   return (
     <SidebarContext.Provider value={{ isOpen: sidebarOpen, toggle }}>
       <ModelContext.Provider value={{ model, setModel, localUrl, setLocalUrl, localModel, setLocalModel }}>
-        <div className="flex h-screen w-screen overflow-hidden bg-[#0a0a0a]">
-          <Sidebar
-            chats={chats}
-            currentChatId={currentChatId}
-            userEmail={userEmail}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
+        <AgentContext.Provider value={{ agents, refreshAgents, openAgentModal }}>
+          <div className="flex h-screen w-screen overflow-hidden bg-[#0a0a0a]">
+            <Sidebar
+              chats={chats}
+              currentChatId={currentChatId}
+              userEmail={userEmail}
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+            />
+            <main className="flex flex-1 flex-col h-full overflow-hidden">
+              {children}
+            </main>
+          </div>
+          <AgentModal
+            isOpen={agentModalOpen}
+            onClose={() => setAgentModalOpen(false)}
+            agentId={editAgentId}
+            onSaveSuccess={refreshAgents}
           />
-          <main className="flex flex-1 flex-col h-full overflow-hidden">
-            {children}
-          </main>
-        </div>
+        </AgentContext.Provider>
       </ModelContext.Provider>
     </SidebarContext.Provider>
   );

@@ -18,18 +18,25 @@ export async function GET(request: Request) {
     // 2. Parse query parameters
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get('chatId');
+    const agentId = searchParams.get('agentId');
 
-    if (!chatId) {
-      return NextResponse.json({ error: 'Missing chatId parameter' }, { status: 400 });
+    if (!chatId && !agentId) {
+      return NextResponse.json({ error: 'Missing chatId or agentId parameter' }, { status: 400 });
     }
 
-    // 3. Fetch documents for this chat
-    const { data: docs, error: fetchError } = await supabase
+    // 3. Fetch documents for this chat or agent
+    let dbQuery = supabase
       .from('documents')
       .select('id, name, mime_type, storage_path, created_at')
-      .eq('chat_id', chatId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .eq('user_id', user.id);
+
+    if (chatId) {
+      dbQuery = dbQuery.eq('chat_id', chatId);
+    } else {
+      dbQuery = dbQuery.eq('agent_id', agentId);
+    }
+
+    const { data: docs, error: fetchError } = await dbQuery.order('created_at', { ascending: false });
 
     if (fetchError) {
       console.error('Failed to fetch documents list:', fetchError);

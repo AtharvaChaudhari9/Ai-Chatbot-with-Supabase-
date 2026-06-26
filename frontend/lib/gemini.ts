@@ -12,7 +12,12 @@ export interface ChatMessage {
 /**
  * Generates response from Gemini model using the history of the conversation.
  */
-export async function generateGeminiResponse(history: ChatMessage[], currentPrompt: string) {
+export async function generateGeminiResponse(
+  history: ChatMessage[],
+  currentPrompt: string,
+  systemInstruction?: string,
+  modelName: string = 'gemini-2.5-flash'
+) {
   // Map database roles ('user' | 'assistant') to Gemini SDK roles ('user' | 'model')
   const contents = [
     ...history.map((msg) => ({
@@ -26,9 +31,15 @@ export async function generateGeminiResponse(history: ChatMessage[], currentProm
   ];
 
   try {
+    const config: Record<string, any> = {};
+    if (systemInstruction) {
+      config.systemInstruction = systemInstruction;
+    }
+
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: modelName,
       contents,
+      config,
     });
 
     return response.text || 'No response generated.';

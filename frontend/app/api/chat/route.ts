@@ -21,16 +21,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing chatId or prompt' }, { status: 400 });
     }
 
-    // Verify user owns the chat
+    // Verify user owns the chat and select agent_id
     const { data: chat, error: chatError } = await supabase
       .from('chats')
-      .select('id, title')
+      .select('id, title, agent_id')
       .eq('id', chatId)
       .eq('user_id', user.id)
       .single();
 
     if (chatError || !chat) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+    }
+
+    // Retrieve agent configuration if this chat is linked to a custom agent
+    let activeModel = model;
+    let activeLocalModel = localModel;
+    let systemPrompt = undefined;
+    const agentId = chat.agent_id;
+
+    if (agentId) {
+      const { data: agent } = await supabase
+        .from('custom_agents')
+        .select('*')
+        .eq('id', agentId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (agent) {
+        activeModel = agent.preferred_model || model;
+        activeLocalModel = agent.local_model_name || localModel;
+        systemPrompt = agent.system_prompt || undefined;
+      }
     }
 
     // Fetch existing message history ordered by created_at ascending
@@ -57,16 +78,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to save user message' }, { status: 500 });
     }
 
-    // Perform semantic search (RAG) context retrieval if documents exist for this chat session
-    let enrichedPrompt = prompt;
-    try {
-      const { count, error: countError } = await supabase
-        .from('documents')
-        .select('*', { count: 'exact', head: true })
-        .eq('chat_id', chatId)
-        .eq('user_id', user.id);
+    // Query documents for chat session and custom agent (RAG context integration)
+    let docQuery = supabase
+      .from('documents')
+      .select('id')
+      .eq('user_id', user.id);
 
-      if (!countError && count && count > 0) {
+    if (agentId) {
+      docQuery = docQuery.or(`chat_id.eq.${chatId},agent_id.eq.${agentId}`);
+    } else {
+      docQuery = docQuery.eq('chat_id', chatId);
+    }
+
+    const { data: docs } = await docQuery;
+    const docIds = docs?.map((d) => d.id) || [];
+
+    let enrichedPrompt = prompt;
+    if (docIds.length > 0) {
+      try {
         // Retrieve relevant document chunks from python backend using Qdrant similarity search
         const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
         const { data: { session } } = await supabase.auth.getSession();
@@ -81,7 +110,7 @@ export async function POST(request: Request) {
           body: JSON.stringify({
             query: prompt,
             user_id: user.id,
-            chat_id: chatId,
+            document_ids: docIds,
             k: 5
           }),
         });
@@ -107,26 +136,32 @@ ${contextText}
 
 User Question: ${prompt}`;
         }
+      } catch (ragErr) {
+        console.warn('RAG Context retrieval failed, falling back to standard prompt:', ragErr);
       }
-    } catch (ragErr) {
-
-      console.warn('RAG Context retrieval failed, falling back to standard prompt:', ragErr);
     }
 
     // Call Gemini or Local LLM based on selection
     let aiResponse: string;
-    if (model === 'local') {
+    if (activeModel === 'local') {
       const { generateLocalLLMResponse } = await import('@/lib/local-llm');
       aiResponse = await generateLocalLLMResponse(
         messages || [],
         enrichedPrompt,
         localUrl,
-        localModel
+        activeLocalModel,
+        systemPrompt
       );
     } else {
+      let targetGeminiModel = 'gemini-2.5-flash';
+      if (activeModel && activeModel !== 'gemini' && activeModel !== 'local') {
+        targetGeminiModel = activeModel;
+      }
       aiResponse = await generateGeminiResponse(
         messages || [],
-        enrichedPrompt
+        enrichedPrompt,
+        systemPrompt,
+        targetGeminiModel
       );
     }
 

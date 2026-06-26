@@ -9,3 +9,6 @@ httpx
 python-dotenv
 psutil
 qdrant-client
+python-docx
+openpyxl
+xlrd

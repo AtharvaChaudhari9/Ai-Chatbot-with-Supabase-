@@ -21,15 +21,17 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const chatId = formData.get('chatId') as string | null;
+    const agentId = formData.get('agentId') as string | null;
 
-    if (!file || !chatId) {
-      return NextResponse.json({ error: 'Missing file or chatId' }, { status: 400 });
+    if (!file || (!chatId && !agentId)) {
+      return NextResponse.json({ error: 'Missing file, chatId or agentId' }, { status: 400 });
     }
 
     // 3. Upload file to Supabase Storage Documents bucket
     const timestamp = Date.now();
-    // Use user.id and chatId to partition file paths securely
-    const filePath = `${user.id}/${chatId}/${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    // Use user.id and chatId/agentId to partition file paths securely
+    const partitionId = chatId ? `chats/${chatId}` : `agents/${agentId}`;
+    const filePath = `${user.id}/${partitionId}/${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     uploadedFilePath = filePath;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -48,7 +50,8 @@ export async function POST(request: Request) {
     const { data: docData, error: docError } = await supabase
       .from('documents')
       .insert({
-        chat_id: chatId,
+        chat_id: chatId || null,
+        agent_id: agentId || null,
         user_id: user.id,
         name: file.name,
         storage_path: filePath,
@@ -82,7 +85,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         document_id: createdDocId,
         storage_path: filePath,
-        chat_id: chatId,
+        chat_id: chatId || null,
+        agent_id: agentId || null,
         user_id: user.id,
         mime_type: file.type || null,
       }),

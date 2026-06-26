@@ -9,6 +9,13 @@ from services.pdf_extractor import extract_text_from_pdf
 from services.chunker import chunk_text
 from services.embeddings import EmbeddingService
 from services.vector_store import download_file_from_storage, save_document_chunks
+from services.office_extractors import (
+    extract_text_from_docx,
+    extract_text_from_doc,
+    extract_text_from_xlsx,
+    extract_text_from_xls,
+    extract_text_from_csv
+)
 
 logger = logging.getLogger("rag_backend.routes.documents")
 router = APIRouter()
@@ -17,7 +24,8 @@ embedding_service = EmbeddingService()
 class DocumentProcessRequest(BaseModel):
     document_id: str
     storage_path: str
-    chat_id: str
+    chat_id: Optional[str] = None
+    agent_id: Optional[str] = None
     user_id: str
     mime_type: Optional[str] = None
 
@@ -43,12 +51,28 @@ async def process_document(request: DocumentProcessRequest, authorization: Optio
 
     tmp_path = None
     try:
-        # Check if the document is a PDF
         is_pdf = False
-        if request.mime_type:
-            is_pdf = request.mime_type == "application/pdf"
-        else:
-            is_pdf = request.storage_path.lower().endswith(".pdf")
+        is_docx = False
+        is_doc = False
+        is_xlsx = False
+        is_xls = False
+        is_csv = False
+
+        mime = request.mime_type.lower() if request.mime_type else ""
+        path = request.storage_path.lower()
+
+        if mime == "application/pdf" or path.endswith(".pdf"):
+            is_pdf = True
+        elif mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or path.endswith(".docx"):
+            is_docx = True
+        elif mime == "application/msword" or path.endswith(".doc"):
+            is_doc = True
+        elif mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or path.endswith(".xlsx"):
+            is_xlsx = True
+        elif mime == "application/vnd.ms-excel" or path.endswith(".xls"):
+            is_xls = True
+        elif mime == "text/csv" or path.endswith(".csv"):
+            is_csv = True
 
         extracted_text = ""
 
@@ -61,6 +85,21 @@ async def process_document(request: DocumentProcessRequest, authorization: Optio
             logger.info(f"PDF downloaded to temporary path: {tmp_path}")
             # Extract PDF text (PyMuPDF with Surya OCR fallback)
             extracted_text = extract_text_from_pdf(tmp_path)
+        elif is_docx:
+            logger.info("Extracting text from Word (.docx) document...")
+            extracted_text = extract_text_from_docx(file_bytes)
+        elif is_doc:
+            logger.info("Extracting text from Word (.doc) document...")
+            extracted_text = extract_text_from_doc(file_bytes)
+        elif is_xlsx:
+            logger.info("Extracting text from Excel (.xlsx) document...")
+            extracted_text = extract_text_from_xlsx(file_bytes)
+        elif is_xls:
+            logger.info("Extracting text from Excel (.xls) document...")
+            extracted_text = extract_text_from_xls(file_bytes)
+        elif is_csv:
+            logger.info("Extracting text from CSV (.csv) document...")
+            extracted_text = extract_text_from_csv(file_bytes)
         else:
             # Treat as plain text / code file
             logger.info("Treating document as standard plain text file.")
@@ -139,6 +178,7 @@ class RetrieveChunksRequest(BaseModel):
     user_id: str
     chat_id: Optional[str] = None
     document_id: Optional[str] = None
+    document_ids: Optional[list[str]] = None
     k: int = 5
 
 class RetrieveChunksResponse(BaseModel):
@@ -156,7 +196,7 @@ async def retrieve_chunks(request: RetrieveChunksRequest, authorization: Optiona
     Retrieves top-k document chunks relevant to the query from Qdrant,
     filtering by user_id and optionally document_id or chat_id's associated document_ids.
     """
-    logger.info(f"Retrieving chunks for query: '{request.query}' (user_id: {request.user_id}, chat_id: {request.chat_id}, document_id: {request.document_id})")
+    logger.info(f"Retrieving chunks for query: '{request.query}' (user_id: {request.user_id}, chat_id: {request.chat_id}, document_id: {request.document_id}, document_ids: {request.document_ids})")
     
     try:
         # 1. Generate query embedding
@@ -164,7 +204,10 @@ async def retrieve_chunks(request: RetrieveChunksRequest, authorization: Optiona
         
         # 2. Resolve document IDs
         document_ids = None
-        if request.document_id:
+        if request.document_ids is not None:
+            document_ids = request.document_ids
+            logger.info(f"Using pre-resolved document IDs: {document_ids}")
+        elif request.document_id:
             document_ids = [request.document_id]
         elif request.chat_id:
             try:
