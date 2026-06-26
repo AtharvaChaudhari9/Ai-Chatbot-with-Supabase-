@@ -302,7 +302,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
               <Sparkles className="w-4 h-4 text-white" />
             </span>
             <span className="font-bold text-md bg-gradient-to-r from-neutral-100 to-neutral-400 bg-clip-text text-transparent">
-              Gemini Chatbot
+              Cognexa
             </span>
           </Link>
           <button 

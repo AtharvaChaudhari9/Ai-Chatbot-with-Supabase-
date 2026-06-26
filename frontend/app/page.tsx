@@ -251,7 +251,7 @@ export default function AuthPage() {
 
       {/* Footer copyright */}
       <span className="absolute bottom-4 text-[10px] text-neutral-600 font-medium select-none">
-        &copy; {new Date().getFullYear()} Gemini Chatbot Inc. All rights reserved.
+        &copy; {new Date().getFullYear()} Cognexa Inc. All rights reserved.
       </span>
 
     </main>
