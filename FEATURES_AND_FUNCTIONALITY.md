@@ -13,6 +13,8 @@ This document details every feature and core functionality implemented in the **
 5. [OCR-Enabled Ingestion Pipeline](#5-ocr-enabled-ingestion-pipeline)
 6. [Vector Storage & Retrieval-Augmented Generation (RAG)](#6-vector-storage--retrieval-augmented-generation-rag)
 7. [Unified Service Orchestration (Docker Compose)](#7-unified-service-orchestration-docker-compose)
+8. [Custom Specialized Agents](#8-custom-specialized-agents)
+9. [Secure Production Deployment (AWS EC2 & Nginx)](#9-secure-production-deployment-aws-ec2--nginx)
 
 ---
 
@@ -163,6 +165,53 @@ Packs the Next.js frontend, FastAPI backend, Qdrant database, and Ollama runner 
 *   **Initial State**: Manual runtime installation (Node local environment, global Python dependencies, running Ollama desktop app, installing local Postgres extensions).
 *   **Current State**: Single commands `docker compose up --build` launches the isolated stack.
 *   **Rationale (Why)**: Solved local dependency conflicts. Isolating applications in containers guarantees they run exactly the same way on any development machine or production cloud instance without installation headaches.
+
+---
+
+## 8. Custom Specialized Agents
+
+### 📝 Description
+Allows users to create, customize, and chat with specialized AI assistants. Each agent has its own specific system instructions, model preferences (Gemini vs. Local), description, avatar, and conversation starters.
+
+### ⚙️ Technical Implementation
+*   **Database Schema**: A relational table `custom_agents` in Supabase with RLS enabled:
+    *   `id`, `user_id` (foreign key to auth.users), `name`, `description`, `system_prompt`, `preferred_model` (gemini/local), `local_model_name`, `avatar_url`, `conversation_starters` (text array).
+*   **API Routes**: Next.js App Router API endpoints:
+    *   `GET /api/agents` & `POST /api/agents`: Retrieve and create custom agents.
+    *   `GET /api/agents/[id]` & `DELETE /api/agents/[id]`: Retrieve and delete specific agents.
+    *   `POST /api/agents/generate-starters`: Uses LLM to dynamically generate context-relevant starter prompts for new agents.
+*   **UI Components**:
+    *   `AgentModal.tsx`: Interactive dashboard to configure agent metadata, choose avatar icons/emojis, and customize instructions.
+    *   `Sidebar.tsx`: Integrates agents list under "Specialized Agents" header with expand/collapse states for agent-specific chat histories.
+
+### 🔄 What Changed & Why?
+*   **Initial State**: Standard general chatbot interface. All chats used a single generic assistant model with standard settings.
+*   **Current State**: Multi-agent framework where users can spin up separate assistants for different roles (e.g. "Python Coding Tutor", "Marketing Copywriter") with custom instructions.
+*   **Rationale (Why)**: Custom prompts enable personalization. By locking specific system prompts, configuration settings, and model preferences into an agent record, users don't need to re-type context rules for every new chat, improving productivity.
+
+---
+
+## 9. Secure Production Deployment (AWS EC2 & Nginx)
+
+### 📝 Description
+Exposes the dockerized chatbot stack securely on a public-facing AWS EC2 instance over HTTPS, utilizing Nginx as a reverse proxy and Let's Encrypt (Certbot) for encryption.
+
+### ⚙️ Technical Implementation
+*   **Infrastructure**: AWS EC2 instance running Amazon Linux, secured with inbound Security Group rules restricting public access to Ports 80 (HTTP) and 443 (HTTPS) only.
+*   **Reverse Proxy**: Nginx installed on the host OS routing Port 80/443 traffic to Next.js on localhost Port 3000.
+*   **Header Buffering**: Customized Nginx location block to resolve the `upstream sent too big header` proxy limit using:
+    ```nginx
+    proxy_buffer_size          128k;
+    proxy_buffers              4 256k;
+    proxy_busy_buffers_size    256k;
+    ```
+*   **SSL/TLS Certificate**: Let's Encrypt certificates managed by Certbot, mapped to a free dynamic subdomain from DuckDNS (`cognexa-ai.duckdns.org`).
+*   **Resource Tuning**: Added a 4GB Swap file to prevent the 1GB RAM EC2 server from experiencing Out of Memory (OOM) failures during compiler steps.
+
+### 🔄 What Changed & Why?
+*   **Initial State**: Localhost-only deployment (`http://localhost:3000`) with raw container ports exposed directly on local interfaces.
+*   **Current State**: Secure cloud-native deployment accessible via `https://cognexa-ai.duckdns.org`.
+*   **Rationale (Why)**: Accessing the app over the web requires cloud hosting. Nginx acts as a security perimeter, ensuring database endpoints (Qdrant, Ollama, FastAPI) remain private, while Certbot secures user logins and chat inputs in transit.
 
 ---
 
