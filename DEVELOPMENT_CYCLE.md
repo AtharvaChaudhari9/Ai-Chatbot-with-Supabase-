@@ -22,6 +22,7 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
 | **5** | **Decoupled Backend** | FastAPI (Python), PyMuPDF, Surya | Node.js single-thread CPU-bottlenecks | Migrated document parsing/OCR processing to a dedicated Python microservice. |
 | **6** | **Vector DB Migration** | Qdrant (HNSW index) | DB index bloat, search latency | Moved vector embeddings out of relational database to a specialized vector database. |
 | **7** | **Containerization** | Docker, Docker Compose, CUDA | "Works on my machine" issues, GPU setup | Full orchestration with isolated bridge network, service discovery, and GPU passthrough. |
+| **8** | **AWS Cloud Deployment** | AWS EC2, Nginx, Certbot (SSL), DuckDNS, Swap | Localhost limits, insecure HTTP, low RAM | Deployed to AWS EC2 using a reverse proxy with tuned buffers, swap file optimization, and cloud LLM fallback. |
 
 ---
 
@@ -72,6 +73,13 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
     1.  **Reproducibility**: Guarantees identical execution between dev and prod. No manual setup of Python virtual environments, system OCR libraries, or Node packages.
     2.  **Service Discovery**: Hardcoded IP addresses and local ports were replaced with internal Docker DNS hostnames (`http://ai-chatbot-backend:8000`, `http://ai-chatbot-qdrant:6333`).
     3.  **GPU Passthrough**: Used the NVIDIA Container Toolkit to map the host GPU (WSL2/Linux CUDA driver) into the Ollama container, speeding up inference by up to 10x.
+
+### Stage 8: AWS Cloud Deployment & Performance Tuning
+*   **Architecture**: Deployed the containerized application on a free-tier AWS EC2 instance. Configured **Nginx** as a reverse proxy on Port 80/443 to forward traffic to the Next.js container (Port 3000) and secure it using a free SSL certificate from **Certbot (Let's Encrypt)** mapped to a **DuckDNS** subdomain.
+*   **Engineering Rationale**:
+    1.  **Security**: Kept database and backend API ports (6333, 8000, 11434) isolated inside the private Docker bridge network, exposing only Nginx on Port 80/443.
+    2.  **Resource Constraints (1GB RAM)**: Configured 4GB of swap memory to prevent the small EC2 instance from crashing during webpack compile and pip dependencies installation.
+    3.  **Cloud LLM Fallback**: Configured Google Gemini API as the primary chatbot interface in production, offloading LLM inference from the EC2's 1 vCPU, which prevents system lockups.
 
 ---
 
@@ -129,6 +137,18 @@ Every strong interview needs a "What went wrong, and how did you fix it?" story.
 *   **Resolution**: 
     1.  *Quantization*: Configured Ollama to use 4-bit quantized GGUF models.
     2.  *Model Downsizing*: Standardized the local development defaults to use `llama3.2:3b` or `qwen2.5-coder:1.5b`. These fit entirely within the 4GB VRAM boundary, resulting in a 10x improvement in tokens-per-second, while reserving the 7B model for high-compute workstations.
+
+### 5. Nginx 502 Bad Gateway (Large Supabase Auth Cookies)
+*   **Problem**: Right after a user logged in successfully in production, Nginx threw a `502 Bad Gateway`. The logs revealed: `upstream sent too big header while reading response header from upstream`. Next.js set multiple large cookies containing Supabase access tokens, which exceeded Nginx's default 4KB/8KB header buffer limits.
+*   **Resolution**: I tuned Nginx's proxy buffering directives. By adding `proxy_buffer_size 128k;`, `proxy_buffers 4 256k;`, and `proxy_busy_buffers_size 256k;` inside the Nginx virtual host block, I allowed Nginx to buffer the large authorization headers safely, resolving the 502 error.
+
+### 6. SELinux Proxy Connection Block
+*   **Problem**: On the Amazon Linux 2023 EC2 instance, Nginx failed to proxy requests to Next.js on port 3000, showing a 502 error and logging `Permission denied` when connecting to `127.0.0.1:3000`.
+*   **Resolution**: Verified that SELinux policies were blocking Nginx (a system service) from initiating TCP sockets. I ran `sudo setsebool -P httpd_can_network_connect 1` to persistently allow Nginx to connect to the Docker container's mapped ports.
+
+### 7. Ollama CPU Lockup on Low-Compute Cloud Instances
+*   **Problem**: Running a query using the local Ollama backend on a single-core EC2 instance caused the request to take over 5 minutes, resulting in a timeout. The Ollama logs showed prompt processing taking `122.18s` for 1024 tokens and locking up the CPU.
+*   **Resolution**: Established hybrid failover best practices. In production, we utilize the Google Gemini API (cloud-based) as the default LLM driver, ensuring sub-second response times without overloading the micro-instance's CPU.
 
 ---
 
