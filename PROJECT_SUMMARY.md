@@ -77,6 +77,8 @@ The diagram below maps out how the system evolved from a cloud-coupled monolithi
 5.  **Stage 5: FastAPI Backend Decoupling**: Decoupled the ingestion pipeline to a FastAPI backend. This solved Next.js (Node.js) single-threaded UI freezes caused by heavy document extraction and Surya OCR execution.
 6.  **Stage 6: Qdrant Vector DB Migration**: Migrated embedding vectors from PostgreSQL to Qdrant. This resolved database index bloat and allowed sub-millisecond, graph-based (HNSW) similarity searches with user metadata filtering.
 7.  **Stage 7: Docker Containerization**: Configured multi-container builds with Docker Compose, utilizing Docker's internal DNS network for service discovery and mounting local NVIDIA GPU drivers into the Ollama container for accelerated inference.
+8.  **Stage 8: AWS Cloud Deployment**: Deployed containerized applications to AWS EC2 instance, configuring Nginx as a reverse proxy, SSL certificates via Certbot, and dynamic subdomains via DuckDNS.
+9.  **Stage 9: Automated CI/CD Pipeline**: Configured GitHub Actions workflows to compile Docker images on remote runners, push to GitHub Container Registry (GHCR), and safely pull/reboot on EC2 via SSH.
 
 ---
 
@@ -101,6 +103,10 @@ The diagram below maps out how the system evolved from a cloud-coupled monolithi
 ### 5. GPU Container Acceleration
 *   **How it works**: Renders Ollama execution fast by mapping the host's physical GPU cores directly inside the containerized Docker network.
 *   **Key Tech**: NVIDIA Container Toolkit, Docker GPU Reservations.
+
+### 6. Automated CI/CD Pipeline
+*   **How it works**: Automatically builds frontend and backend Docker containers in GitHub Actions runners on push to main, pushes to GitHub Container Registry (GHCR), and pulls/restarts them on EC2 over SSH.
+*   **Key Tech**: GitHub Actions, GHCR, SSH-deploy, Docker Compose.
 
 ---
 

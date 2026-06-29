@@ -15,6 +15,7 @@ This document details every feature and core functionality implemented in the **
 7. [Unified Service Orchestration (Docker Compose)](#7-unified-service-orchestration-docker-compose)
 8. [Custom Specialized Agents](#8-custom-specialized-agents)
 9. [Secure Production Deployment (AWS EC2 & Nginx)](#9-secure-production-deployment-aws-ec2--nginx)
+10. [Automated CI/CD Pipeline (GitHub Actions & GHCR)](#10-automated-cicd-pipeline-github-actions--ghcr)
 
 ---
 
@@ -212,6 +213,27 @@ Exposes the dockerized chatbot stack securely on a public-facing AWS EC2 instanc
 *   **Initial State**: Localhost-only deployment (`http://localhost:3000`) with raw container ports exposed directly on local interfaces.
 *   **Current State**: Secure cloud-native deployment accessible via `https://cognexa-ai.duckdns.org`.
 *   **Rationale (Why)**: Accessing the app over the web requires cloud hosting. Nginx acts as a security perimeter, ensuring database endpoints (Qdrant, Ollama, FastAPI) remain private, while Certbot secures user logins and chat inputs in transit.
+
+---
+
+## 10. Automated CI/CD Pipeline (GitHub Actions & GHCR)
+
+### 📝 Description
+Automates code testing, container compilation, and cloud deployment. Every push to the `main` branch on GitHub triggers remote CI runners to compile Docker containers, publish them to the GitHub Container Registry (GHCR), and securely deploy them to the AWS EC2 production instance.
+
+### ⚙️ Technical Implementation
+*   **Workflow Engine**: GitHub Actions using the [.github/workflows/deploy.yml](file:///c:/Users/cdrja/Desktop/chatbot-supabase/.github/workflows/deploy.yml) configuration.
+*   **Compilation Environment**: Remote Ubuntu runners executing Docker Buildx with cache optimization enabled (`type=gha`).
+*   **Artifact Registry**: GitHub Container Registry (`ghcr.io`) hosting private package images.
+*   **Deployment Hook**: SSH connection executed via `appleboy/ssh-action` connecting to EC2 on Port 22 using a repository SSH key, pulling latest changes, logging into GHCR, pulling the pre-built packages, restarting containers, and pruning stale layers.
+
+### 🔄 What Changed & Why?
+*   **Initial State**: Manual deployment: developers SSH'ed into EC2, ran `git pull`, and executed `docker-compose up --build`.
+*   **Current State**: Full Git-triggered remote compilation and automatic deployment.
+*   **Rationale (Why)**: 
+    1.  **Server Protection**: Running local webpack compiles and pip compilations on a Free Tier EC2 instance (1GB RAM) spikes the single-core CPU to 100%, causing OOM page faults and crashing active chatbot sessions. Offloading compiles to GitHub Action runners ensures the server remains responsive.
+    2.  **Low-Downtime Reboots**: Pulling pre-compiled Docker packages takes only a few seconds, reducing redeployment downtime from several minutes to under 15 seconds.
+    3.  **Clean State Packaging**: Using registry-based images eliminates the need to compile code locally, guaranteeing identical builds between development and production environments.
 
 ---
 

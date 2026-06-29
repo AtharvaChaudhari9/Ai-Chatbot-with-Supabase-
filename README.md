@@ -31,10 +31,10 @@ A containerized Next.js and FastAPI application featuring RAG document ingestion
 
 ### Containers Description
 
-1. **`ai-chatbot-frontend`** (`ai-chatbot/frontend`): Next.js app serving client-side UI, user authentication, and chat history. Relies on the backend container for embedding searches and document ingestion.
-2. **`ai-chatbot-backend`** (`ai-chatbot/backend`): FastAPI service handling document text extraction (PyMuPDF & Surya OCR fallback), text chunking, dynamic model size checks, local embedding queries, and Qdrant interactions.
-3. **`ai-chatbot-qdrant`** (`qdrant/qdrant`): Vector database storing chunk embeddings and payload metadata, handling similarity search and RLS metadata filters.
-4. **`ai-chatbot-ollama`** (`ollama/ollama`): Runs local LLMs and generates embedding vectors on CPU (or optional GPU).
+1. **`ai-chatbot-frontend`** (`ghcr.io/atharvachaudhari9/ai-chatbot-supabase/frontend:latest`): Next.js app serving client-side UI, user authentication, and chat history. Relies on the backend container for embedding searches and document ingestion.
+2. **`ai-chatbot-backend`** (`ghcr.io/atharvachaudhari9/ai-chatbot-supabase/backend:latest`): FastAPI service handling document text extraction (PyMuPDF & Surya OCR fallback), text chunking, dynamic model size checks, local embedding queries, and Qdrant interactions.
+3. **`ai-chatbot-qdrant`** (`qdrant/qdrant:latest`): Vector database storing chunk embeddings and payload metadata, handling similarity search and RLS metadata filters.
+4. **`ai-chatbot-ollama`** (`ollama/ollama:latest`): Runs local LLMs and generates embedding vectors on CPU (or optional GPU).
 
 ---
 
@@ -99,6 +99,23 @@ All pulled models are saved in the persistent `ollama_models` volume and will pe
 *   **Stop services**: `docker compose down`
 *   **Restart/Rebuild**: `docker compose up --build`
 *   **Check logs**: `docker compose logs -f`
+
+---
+
+## CI/CD Pipeline
+
+The project features a fully automated continuous integration and deployment workflow powered by **GitHub Actions** and **GitHub Container Registry (GHCR)**:
+
+*   **Workflow Config**: Located in [.github/workflows/deploy.yml](file:///c:/Users/cdrja/Desktop/chatbot-supabase/.github/workflows/deploy.yml).
+*   **Triggers**: Automatic deployment on push to `main` branch.
+*   **Process**:
+    1.  Remote GitHub Actions runners compile the `frontend` and `backend` Docker containers.
+    2.  Pushes compiled images under the `:latest` tag to GHCR.
+    3.  Establishes an SSH connection to your AWS EC2 production instance.
+    4.  Pulls the new package layers and triggers a container restart via `docker-compose pull && docker-compose up -d`.
+    5.  Prunes stale Docker images on the EC2 host automatically to conserve Free Tier disk space.
+
+*Refer to the [walkthrough.md](file:///C:/Users/cdrja/.gemini/antigravity-ide/brain/d71337b1-dcd5-4f2f-b0dd-1eabe627a97c/walkthrough.md) artifact for the environment secrets setup instructions required to activate the pipeline.*
 
 ---
 
