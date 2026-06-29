@@ -23,6 +23,7 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
 | **6** | **Vector DB Migration** | Qdrant (HNSW index) | DB index bloat, search latency | Moved vector embeddings out of relational database to a specialized vector database. |
 | **7** | **Containerization** | Docker, Docker Compose, CUDA | "Works on my machine" issues, GPU setup | Full orchestration with isolated bridge network, service discovery, and GPU passthrough. |
 | **8** | **AWS Cloud Deployment** | AWS EC2, Nginx, Certbot (SSL), DuckDNS, Swap | Localhost limits, insecure HTTP, low RAM | Deployed to AWS EC2 using a reverse proxy with tuned buffers, swap file optimization, and cloud LLM fallback. |
+| **9** | **Automated CI/CD** | GitHub Actions, GHCR | Compilation overhead on EC2, manual deploys | Offloaded heavy Docker image compilation to remote runners, deploying pre-built packages to save host resources. |
 
 ---
 
@@ -80,6 +81,13 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
     1.  **Security**: Kept database and backend API ports (6333, 8000, 11434) isolated inside the private Docker bridge network, exposing only Nginx on Port 80/443.
     2.  **Resource Constraints (1GB RAM)**: Configured 4GB of swap memory to prevent the small EC2 instance from crashing during webpack compile and pip dependencies installation.
     3.  **Cloud LLM Fallback**: Configured Google Gemini API as the primary chatbot interface in production, offloading LLM inference from the EC2's 1 vCPU, which prevents system lockups.
+
+### Stage 9: Automated CI/CD Pipeline (GitHub Actions & GHCR)
+*   **Architecture**: Implemented remote continuous integration and deployment. Upon code push, **GitHub Actions** runs linting/checks, builds Docker images on remote runners, and publishes them to **GitHub Container Registry (GHCR)**. The workflow then SSHs into the EC2 instance to pull pre-compiled images and run them using Docker Compose.
+*   **Engineering Rationale**:
+    1.  **Free Tier Memory Conservation**: Running live `docker-compose build` commands on a `t2.micro` (1GB RAM) instance locks up the CPU, runs heavy disk swap, and crashes running application services. Offloading compilation to GitHub's free runners saves host RAM/CPU.
+    2.  **Rapid, Low-Overhead Deployments**: Pulling pre-compiled layers from GHCR takes seconds and avoids long compilation delays, providing near-zero downtime deployment.
+    3.  **Enterprise Best Practices**: If a paid high-compute EC2 instance (e.g. `t3.medium` or larger with 4GB+ RAM) were used, we could have chosen a GitOps pull-based agent (such as **Watchtower** or **ArgoCD**) or self-hosted runners. However, remote building to a registry is always preferred over compiling locally on production instances to ensure clean isolation, reproducibility, and minimal security footprint.
 
 ---
 
@@ -173,6 +181,9 @@ Use these questions and answers to prepare for system design and coding intervie
 
 ### Q4: How is local GPU acceleration handled inside your Docker container environment?
 *   **How to answer**: "We leverage WSL2 on Windows and the NVIDIA Container Toolkit. Docker containers don't natively see host GPU hardware. The Container Toolkit maps the host's CUDA drivers into the container runtime. In our `docker-compose.yml`, we define a reservation block under the `ollama` service specifying `capabilities: [gpu]` and `driver: nvidia`. This exposes the NVIDIA hardware to Ollama, allowing it to offload tensor calculations to the GPU's CUDA cores instead of executing them sequentially on the CPU."
+
+### Q5: How did you design CI/CD for the application under severe memory constraints, and what would change on a paid tier?
+*   **How to answer**: "We built a GitHub Actions workflow that compiles Docker images remotely and pushes them to GitHub Container Registry (GHCR), using SSH to trigger a pull-and-restart on the server. Because the deployment target is an AWS Free Tier `t2.micro` (1GB RAM), running `docker-compose build` locally triggers high swapping, locks the single-core CPU, and crashes existing web sessions. Moving compilation to GitHub's infrastructure solved this, reducing host deployment overhead to near-zero. If we upgraded to a paid high-spec EC2 tier, we would still build remotely to maintain isolated packaging, but we might transition deployment triggers from push-based SSH scripts to a pull-based GitOps loop (like Portainer Webhooks or Watchtower) to avoid storing host SSH private keys inside GitHub secrets."
 
 ---
 
