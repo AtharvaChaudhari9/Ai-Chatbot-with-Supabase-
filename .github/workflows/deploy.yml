@@ -35,7 +35,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ghcr.io/atharvachaudhari9/ai-chatbot-with-supabase-/backend:latest
+          tags: ghcr.io/atharvachaudhari9/ai-chatbot-supabase/backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -48,7 +48,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          tags: ghcr.io/atharvachaudhari9/ai-chatbot-with-supabase-/frontend:latest
+          tags: ghcr.io/atharvachaudhari9/ai-chatbot-supabase/frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
