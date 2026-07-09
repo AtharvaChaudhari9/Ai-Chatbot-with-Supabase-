@@ -9,7 +9,10 @@ if %errorlevel% neq 0 (
 )
 
 :: Prompt for commit message
-set /p commit_msg="Enter commit message (or press Enter for 'Auto-update'): "
+set /p commit_msg="Enter commit message (Press Enter for 'Auto-update', or type 'exit' to abort): "
+
+:: Check if user wants to abort
+if /i "%commit_msg%"=="exit" goto abort
 
 :: If user inputs nothing, set default message
 if "%commit_msg%"=="" (
@@ -40,4 +43,12 @@ if %errorlevel% equ 0 (
     echo Error: Push failed. Please check your git status or credentials.
 )
 
+goto end
+
+:abort
+echo.
+echo Deployment aborted. No changes staged or pushed.
+
+:end
 endlocal
+

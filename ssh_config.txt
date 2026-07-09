@@ -1,4 +1,4 @@
 Host cognexa
     HostName cognexa-ai.duckdns.org
     User ec2-user
-    IdentityFile "C:/Users/cdrja/Desktop/Aws Pair key/Chatbot key pair/AiChatbot-key.pem"
+    IdentityFile "C:\Users\cdrja\Desktop\Aws Pair key\Chatbot key pair\AiChatbot-key.pem"
