@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/AtharvaChaudhari9/Ai-Chatbot-with-Supabase-/issues"
   },
-  "homepage": "https://github.com/AtharvaChaudhari9/Ai-Chatbot-with-Supabase-#readme"
+  "homepage": "https://github.com/AtharvaChaudhari9/Ai-Chatbot-with-Supabase-#readme",
+  "dependencies": {
+    "next-auth": "^5.0.0-beta.31"
+  }
 }
