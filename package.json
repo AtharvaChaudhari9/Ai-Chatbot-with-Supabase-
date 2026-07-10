@@ -1,0 +1,23 @@
+{
+  "name": "chatbot-supabase",
+  "version": "1.0.0",
+  "description": "A containerized Next.js and FastAPI application featuring RAG document ingestion, local vector database indexing via Qdrant, and flexible LLM providers (Google Gemini API & local Ollama).",
+  "main": "index.js",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.1"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AtharvaChaudhari9/Ai-Chatbot-with-Supabase-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AtharvaChaudhari9/Ai-Chatbot-with-Supabase-/issues"
+  },
+  "homepage": "https://github.com/AtharvaChaudhari9/Ai-Chatbot-with-Supabase-#readme"
+}

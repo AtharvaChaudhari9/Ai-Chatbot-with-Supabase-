@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Change directory to repository root
+cd /d "%~dp0.."
+
 :: Check if git is installed
 where git >nul 2>nul
 if %errorlevel% neq 0 (
