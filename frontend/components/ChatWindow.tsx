@@ -7,8 +7,6 @@ import { Menu, Sparkles, Loader2, Compass, PenTool, Code, AlertCircle, FileText,
 import { useModel, useAgent } from '@/app/chat/LayoutClient';
 import ModelSelector from './ModelSelector';
 import OcrBenchmarkModal from './OcrBenchmarkModal';
-import { createClient } from '@/lib/supabase/client';
-
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -19,10 +17,12 @@ interface Message {
 interface ChatWindowProps {
   chatId: string;
   chatTitle: string;
+  agentId?: string | null;
   initialMessages: Message[];
   onMenuToggle: () => void;
   initialPrompt?: string;
 }
+
 
 const SUGGESTIONS = [
   {
@@ -54,7 +54,7 @@ interface DocumentMeta {
   isAgentDoc?: boolean;
 }
 
-export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuToggle, initialPrompt }: ChatWindowProps) {
+export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages, onMenuToggle, initialPrompt }: ChatWindowProps) {
   const { model, localUrl, localModel } = useModel();
   const { openAgentModal } = useAgent();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -87,15 +87,8 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
       }
 
       // 2. Fetch agent documents if applicable
-      const supabase = createClient();
-      const { data: chatData } = await supabase
-        .from('chats')
-        .select('agent_id')
-        .eq('id', chatId)
-        .single();
-
-      if (chatData?.agent_id) {
-        const agentDocRes = await fetch(`/api/documents/list?agentId=${chatData.agent_id}`);
+      if (agentId) {
+        const agentDocRes = await fetch(`/api/documents/list?agentId=${agentId}`);
         if (agentDocRes.ok) {
           const data = await agentDocRes.json();
           const agentDocs = (data.documents || []).map((d: any) => ({
@@ -105,6 +98,7 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
           docs = [...docs, ...agentDocs];
         }
       }
+
 
       setActiveDocuments(docs);
     } catch (err) {
@@ -138,27 +132,22 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
   const fetchChatAgentDetails = async () => {
     if (!chatId) return;
     try {
-      const supabase = createClient();
-      const { data: chatData } = await supabase
-        .from('chats')
-        .select('agent_id')
-        .eq('id', chatId)
-        .single();
-      
-      if (chatData?.agent_id) {
-        const { data: agent } = await supabase
-          .from('custom_agents')
-          .select('*')
-          .eq('id', chatData.agent_id)
-          .single();
-        
-        if (agent) {
-          setAgentDetails(agent);
-          const startersList = agent.conversation_starters || [];
-          if (startersList.length > 0) {
-            const shuffled = [...startersList].sort(() => 0.5 - Math.random());
-            setShuffledStarters(shuffled.slice(0, 3));
+      if (agentId) {
+        const response = await fetch(`/api/agents/${agentId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const agent = data.agent;
+          if (agent) {
+            setAgentDetails(agent);
+            const startersList = agent.conversation_starters || [];
+            if (startersList.length > 0) {
+              const shuffled = [...startersList].sort(() => 0.5 - Math.random());
+              setShuffledStarters(shuffled.slice(0, 3));
+            } else {
+              setShuffledStarters([]);
+            }
           } else {
+            setAgentDetails(null);
             setShuffledStarters([]);
           }
         } else {
@@ -169,6 +158,7 @@ export default function ChatWindow({ chatId, chatTitle, initialMessages, onMenuT
         setAgentDetails(null);
         setShuffledStarters([]);
       }
+
     } catch (err) {
       console.error('Error fetching chat agent details:', err);
       setAgentDetails(null);

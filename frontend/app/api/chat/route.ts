@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateGeminiResponse } from '@/lib/gemini';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
-    // Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -26,7 +24,7 @@ export async function POST(request: Request) {
       .from('chats')
       .select('id, title, agent_id')
       .eq('id', chatId)
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .single();
 
     if (chatError || !chat) {
@@ -44,8 +42,9 @@ export async function POST(request: Request) {
         .from('custom_agents')
         .select('*')
         .eq('id', agentId)
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .single();
+
       
       if (agent) {
         activeModel = agent.preferred_model || model;
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
     let docQuery = supabase
       .from('documents')
       .select('id')
-      .eq('user_id', user.id);
+      .eq('user_id', session.user.id);
 
     if (agentId) {
       docQuery = docQuery.or(`chat_id.eq.${chatId},agent_id.eq.${agentId}`);
@@ -98,8 +97,7 @@ export async function POST(request: Request) {
       try {
         // Retrieve relevant document chunks from python backend using Qdrant similarity search
         const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+        const token = session.accessToken;
 
         const retrieveRes = await fetch(`${pythonBackendUrl}/api/retrieve-chunks`, {
           method: 'POST',
@@ -109,11 +107,12 @@ export async function POST(request: Request) {
           },
           body: JSON.stringify({
             query: prompt,
-            user_id: user.id,
+            user_id: session.user.id,
             document_ids: docIds,
             k: 5
           }),
         });
+
 
         if (!retrieveRes.ok) {
           throw new Error(`Python retrieve-chunks service returned status ${retrieveRes.status}`);

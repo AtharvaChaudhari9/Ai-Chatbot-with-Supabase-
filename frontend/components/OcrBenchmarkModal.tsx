@@ -9,7 +9,8 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell
 } from 'recharts';
-import { createClient } from '@/lib/supabase/client';
+import { createMessage } from '@/app/chat/actions';
+
 
 interface OcrBenchmarkModalProps {
   documentId: string;
@@ -134,15 +135,11 @@ export default function OcrBenchmarkModal({
       `**Recommendation**:\n${rec.recommendation_text}`;
       
     try {
-      const supabase = createClient();
-      await supabase.from('messages').insert({
-        chat_id: chatId,
-        role: 'assistant',
-        content,
-      });
+      await createMessage(chatId, 'assistant', content);
     } catch (err) {
       console.error('Failed to auto-insert benchmark message in chat history:', err);
     }
+
   };
 
   const handleCopyReport = () => {

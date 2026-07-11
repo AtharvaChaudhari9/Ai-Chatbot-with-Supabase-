@@ -6,7 +6,8 @@ import { useSidebar } from './LayoutClient';
 import PromptInput from '@/components/PromptInput';
 import ModelSelector from '@/components/ModelSelector';
 import { Sparkles, Compass, PenTool, Code, Menu, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { createChatAndGetId } from './actions';
+
 
 const SUGGESTIONS = [
   {
@@ -38,29 +39,14 @@ export default function ChatLandingPage() {
   const handleStartConversation = (text: string, file?: File) => {
     startTransition(async () => {
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Create the new chat in database with a placeholder title
-        const { data: chat, error } = await supabase
-          .from('chats')
-          .insert({
-            user_id: user.id,
-            title: 'New Chat',
-          })
-          .select('id')
-          .single();
-
-        if (error || !chat) {
-          throw new Error(error?.message || 'Failed to create chat');
-        }
+        // Create the new chat using our Server Action
+        const chatId = await createChatAndGetId();
 
         // Upload the file if provided
         if (file) {
           const formData = new FormData();
           formData.append('file', file);
-          formData.append('chatId', chat.id);
+          formData.append('chatId', chatId);
           const response = await fetch('/api/documents/upload', {
             method: 'POST',
             body: formData,
@@ -71,13 +57,14 @@ export default function ChatLandingPage() {
         }
 
         // Redirect to the chat page with the prompt query parameter
-        router.push(`/chat/${chat.id}?prompt=${encodeURIComponent(text)}`);
+        router.push(`/chat/${chatId}?prompt=${encodeURIComponent(text)}`);
         router.refresh();
       } catch (err) {
         console.error('Error starting conversation:', err);
       }
     });
   };
+
 
   return (
     <div className="flex flex-1 flex-col h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden relative">

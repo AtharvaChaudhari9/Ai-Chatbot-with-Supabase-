@@ -14,6 +14,7 @@ interface Message {
 interface ChatClientProps {
   chatId: string;
   chatTitle: string;
+  agentId?: string | null;
   initialMessages: Message[];
   initialPrompt?: string;
 }
@@ -21,6 +22,7 @@ interface ChatClientProps {
 export default function ChatClient({
   chatId,
   chatTitle,
+  agentId,
   initialMessages,
   initialPrompt,
 }: ChatClientProps) {
@@ -30,9 +32,11 @@ export default function ChatClient({
     <ChatWindow
       chatId={chatId}
       chatTitle={chatTitle}
+      agentId={agentId}
       initialMessages={initialMessages}
       initialPrompt={initialPrompt}
       onMenuToggle={toggle}
     />
   );
 }
+

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function GET(
   request: Request,
@@ -9,21 +10,16 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Fetch user session JWT
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    // 2. Fetch OIDC access token
+    const token = session.accessToken;
+
 
     // 3. Call python backend GET endpoint
     const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';

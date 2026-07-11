@@ -2,20 +2,19 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateGeminiResponse } from '@/lib/gemini';
 import { generateLocalLLMResponse } from '@/lib/local-llm';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
 
     // 2. Parse request body
     const { roleName, roleDescription, systemPrompt, preferredModel, localModelName } = await request.json();

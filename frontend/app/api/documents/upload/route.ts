@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   let createdDocId: string | null = null;
@@ -7,13 +8,10 @@ export async function POST(request: Request) {
   const supabase = await createClient();
 
   try {
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -29,9 +27,9 @@ export async function POST(request: Request) {
 
     // 3. Upload file to Supabase Storage Documents bucket
     const timestamp = Date.now();
-    // Use user.id and chatId/agentId to partition file paths securely
+    // Use Keycloak user UUID and chatId/agentId to partition file paths securely
     const partitionId = chatId ? `chats/${chatId}` : `agents/${agentId}`;
-    const filePath = `${user.id}/${partitionId}/${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filePath = `${session.user.id}/${partitionId}/${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     uploadedFilePath = filePath;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -52,12 +50,13 @@ export async function POST(request: Request) {
       .insert({
         chat_id: chatId || null,
         agent_id: agentId || null,
-        user_id: user.id,
+        user_id: session.user.id,
         name: file.name,
         storage_path: filePath,
         mime_type: file.type || 'application/octet-stream',
       })
       .select('id')
+
       .single();
 
     if (docError || !docData) {
@@ -70,10 +69,7 @@ export async function POST(request: Request) {
     createdDocId = docData.id;
 
     // 5. Delegate document extraction, chunking, and vector embedding to Python backend
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    const token = session.accessToken;
 
     const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
     const response = await fetch(`${pythonBackendUrl}/api/process-document`, {
@@ -87,10 +83,11 @@ export async function POST(request: Request) {
         storage_path: filePath,
         chat_id: chatId || null,
         agent_id: agentId || null,
-        user_id: user.id,
+        user_id: session.user.id,
         mime_type: file.type || null,
       }),
     });
+
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ detail: 'Failed to process document in python backend' }));

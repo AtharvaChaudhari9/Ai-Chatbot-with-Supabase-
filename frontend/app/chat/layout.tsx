@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import ChatLayoutClient from './LayoutClient';
+import { auth } from '@/auth';
 
 export default async function ChatLayout({
   children,
@@ -8,14 +9,12 @@ export default async function ChatLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session || !session.user) {
     redirect('/');
   }
+
 
   // Fetch all chats for the authenticated user
   const { data: chats } = await supabase
@@ -24,7 +23,7 @@ export default async function ChatLayout({
     .order('updated_at', { ascending: false });
 
   return (
-    <ChatLayoutClient chats={chats || []} userEmail={user.email}>
+    <ChatLayoutClient chats={chats || []} userEmail={session.user.email ?? ''}>
       {children}
     </ChatLayoutClient>
   );

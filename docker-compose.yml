@@ -83,11 +83,15 @@ services:
       KC_DB_PASSWORD: keycloak_db_password
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_PROXY_HEADERS: xforwarded
     ports:
       - "8080:8080"
+    volumes:
+      - ./keycloak/themes:/opt/keycloak/themes
     depends_on:
       - keycloak-db
     restart: unless-stopped
+
 
 volumes:
   qdrant_storage:

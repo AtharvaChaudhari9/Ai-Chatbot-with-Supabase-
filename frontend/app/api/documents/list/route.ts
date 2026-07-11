@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,7 +26,8 @@ export async function GET(request: Request) {
     let dbQuery = supabase
       .from('documents')
       .select('id, name, mime_type, storage_path, created_at')
-      .eq('user_id', user.id);
+      .eq('user_id', session.user.id);
+
 
     if (chatId) {
       dbQuery = dbQuery.eq('chat_id', chatId);

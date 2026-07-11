@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,10 +20,8 @@ export async function POST(request: Request) {
     }
 
     // 3. Fetch user session JWT to forward for security
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    const token = session.accessToken;
+
 
     // 4. Proxy request to Python backend
     const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';

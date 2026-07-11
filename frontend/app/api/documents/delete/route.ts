@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -26,8 +24,9 @@ export async function POST(request: Request) {
       .from('documents')
       .select('storage_path')
       .eq('id', documentId)
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .single();
+
 
     if (fetchError || !doc) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
@@ -66,7 +65,8 @@ export async function POST(request: Request) {
       .from('documents')
       .delete()
       .eq('id', documentId)
-      .eq('user_id', user.id);
+      .eq('user_id', session.user.id);
+
 
     if (deleteError) {
       return NextResponse.json({ error: `Failed to delete database entry: ${deleteError.message}` }, { status: 500 });

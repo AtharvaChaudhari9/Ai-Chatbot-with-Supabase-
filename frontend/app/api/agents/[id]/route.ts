@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function GET(
   request: Request,
@@ -9,22 +10,19 @@ export async function GET(
     const supabase = await createClient();
     const { id } = await params;
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Fetch specific agent
+    // 2. Fetch specific agent owned by user
     const { data: agent, error: fetchError } = await supabase
       .from('custom_agents')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .single();
 
     if (fetchError || !agent) {
@@ -49,13 +47,10 @@ export async function PUT(
     const supabase = await createClient();
     const { id } = await params;
 
-    // 1. Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -89,7 +84,7 @@ export async function PUT(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .select('*')
       .single();
 
@@ -116,13 +111,10 @@ export async function DELETE(
     const supabase = await createClient();
     const { id } = await params;
 
-    // 1. Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -131,7 +123,7 @@ export async function DELETE(
       .from('custom_agents')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .single();
 
     if (verifyError || !agent) {
@@ -143,7 +135,7 @@ export async function DELETE(
       .from('documents')
       .select('id, storage_path')
       .eq('agent_id', id)
-      .eq('user_id', user.id);
+      .eq('user_id', session.user.id);
 
     if (docs && docs.length > 0) {
       const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
@@ -177,7 +169,7 @@ export async function DELETE(
       .from('custom_agents')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id);
+      .eq('user_id', session.user.id);
 
     if (deleteError) {
       console.error('Failed to delete agent:', deleteError);
@@ -193,3 +185,4 @@ export async function DELETE(
     );
   }
 }
+

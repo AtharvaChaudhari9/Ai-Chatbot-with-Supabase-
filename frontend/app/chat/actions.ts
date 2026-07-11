@@ -3,16 +3,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
 
 export async function createChat(agentId?: string) {
   const supabase = await createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  if (!session || !session.user) {
     throw new Error('Unauthorized');
   }
 
@@ -21,7 +18,7 @@ export async function createChat(agentId?: string) {
   const { data, error } = await supabase
     .from('chats')
     .insert({
-      user_id: user.id,
+      user_id: session.user.id,
       title,
       agent_id: agentId || null,
     })
@@ -38,13 +35,9 @@ export async function createChat(agentId?: string) {
 
 export async function renameChat(chatId: string, title: string) {
   const supabase = await createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  if (!session || !session.user) {
     throw new Error('Unauthorized');
   }
 
@@ -52,7 +45,7 @@ export async function renameChat(chatId: string, title: string) {
     .from('chats')
     .update({ title, updated_at: new Date().toISOString() })
     .eq('id', chatId)
-    .eq('user_id', user.id);
+    .eq('user_id', session.user.id);
 
   if (error) {
     throw new Error(error.message);
@@ -63,13 +56,9 @@ export async function renameChat(chatId: string, title: string) {
 
 export async function deleteChat(chatId: string) {
   const supabase = await createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  if (!session || !session.user) {
     throw new Error('Unauthorized');
   }
 
@@ -77,7 +66,7 @@ export async function deleteChat(chatId: string) {
     .from('chats')
     .delete()
     .eq('id', chatId)
-    .eq('user_id', user.id);
+    .eq('user_id', session.user.id);
 
   if (error) {
     throw new Error(error.message);
@@ -85,10 +74,11 @@ export async function deleteChat(chatId: string) {
 
   revalidatePath('/chat', 'layout');
 }
+
 export async function getChats() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const session = await auth();
+  if (!session || !session.user) return [];
 
   const { data, error } = await supabase
     .from('chats')
@@ -98,3 +88,67 @@ export async function getChats() {
   if (error) return [];
   return data;
 }
+
+export async function createChatAndGetId(agentId?: string) {
+  const supabase = await createClient();
+  const session = await auth();
+
+  if (!session || !session.user) {
+    throw new Error('Unauthorized');
+  }
+
+  let title = 'New Chat';
+
+  const { data, error } = await supabase
+    .from('chats')
+    .insert({
+      user_id: session.user.id,
+      title,
+      agent_id: agentId || null,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath('/chat', 'layout');
+  return data.id;
+}
+
+export async function createMessage(chatId: string, role: 'user' | 'assistant', content: string) {
+  const supabase = await createClient();
+  const session = await auth();
+
+  if (!session || !session.user) {
+    throw new Error('Unauthorized');
+  }
+
+  // Double check that the user owns the chat
+  const { data: chat, error: chatError } = await supabase
+    .from('chats')
+    .select('id')
+    .eq('id', chatId)
+    .eq('user_id', session.user.id)
+    .single();
+
+  if (chatError || !chat) {
+    throw new Error('Unauthorized or chat not found');
+  }
+
+  const { error } = await supabase
+    .from('messages')
+    .insert({
+      chat_id: chatId,
+      role,
+      content,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+
+

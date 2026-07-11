@@ -73,7 +73,7 @@ if [ ! -d "/etc/nginx/conf.d" ]; then
     sudo mkdir -p /etc/nginx/conf.d
 fi
 
-# Write Nginx configuration for proxying Port 80 to Port 3000 (frontend)
+# Write Nginx configuration for proxying Port 80 to Port 3000 (frontend) and 8080 (Keycloak)
 sudo tee $NGINX_CONF > /dev/null << 'EOF'
 server {
     listen 80;
@@ -82,6 +82,39 @@ server {
     # Adjust client_max_body_size to support uploading larger PDF/TXT files
     client_max_body_size 50M;
 
+    # Keycloak Realm routing (OIDC endpoints)
+    location /realms/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Buffer tweaks for large OIDC headers
+        proxy_buffer_size          128k;
+        proxy_buffers              4 256k;
+        proxy_busy_buffers_size    256k;
+    }
+
+    # Keycloak Admin console
+    location /admin/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Keycloak Resources static assets
+    location /resources/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend Next.js routing
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -90,7 +123,7 @@ server {
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
 
-        # Fix "upstream sent too big header" when Supabase sets large auth cookies
+        # Fix "upstream sent too big header" when NextAuth sets large cookies
         proxy_buffer_size          128k;
         proxy_buffers              4 256k;
         proxy_busy_buffers_size    256k;

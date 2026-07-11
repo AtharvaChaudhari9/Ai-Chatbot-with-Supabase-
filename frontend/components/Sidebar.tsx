@@ -9,8 +9,9 @@ import {
   Bot, Settings, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { createChat, renameChat, deleteChat } from '@/app/chat/actions';
-import { createClient } from '@/lib/supabase/client';
 import { useAgent } from '@/app/chat/LayoutClient';
+import { signOut } from 'next-auth/react';
+
 
 interface ChatItem {
   id: string;
@@ -186,11 +187,11 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   };
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    await signOut({
+      callbackUrl: 'http://localhost:8080/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=http://localhost:3000',
+    });
   };
+
 
   const renderChatItem = (chat: ChatItem) => {
     const isActive = chat.id === currentChatId;

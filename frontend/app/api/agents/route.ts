@@ -1,24 +1,25 @@
+'use server';
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Fetch custom agents
+    // 2. Fetch custom agents owned by this user (filtering explicitly now that RLS is bypassed by service role)
     const { data: agents, error: fetchError } = await supabase
       .from('custom_agents')
       .select('*')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
 
     if (fetchError) {
@@ -40,13 +41,10 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 1. Authenticate user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Authenticate user session via NextAuth
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -70,7 +68,7 @@ export async function POST(request: Request) {
     const { data: agent, error: insertError } = await supabase
       .from('custom_agents')
       .insert({
-        user_id: user.id,
+        user_id: session.user.id,
         name: name.trim(),
         description: description?.trim() || null,
         avatar_url: avatar_url?.trim() || null,
@@ -96,3 +94,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

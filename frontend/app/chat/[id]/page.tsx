@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import ChatClient from './ChatClient';
+import { auth } from '@/auth';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -16,11 +17,9 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
   const supabase = await createClient();
 
   // Validate user authentication session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await auth();
 
-  if (!user) {
+  if (!session || !session.user) {
     redirect('/');
   }
 
@@ -29,12 +28,13 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
     .from('chats')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .single();
 
   if (chatError || !chat) {
     notFound();
   }
+
 
   // Fetch past messages ordered chronologically
   const { data: messages } = await supabase
@@ -47,6 +47,7 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
     <ChatClient
       chatId={id}
       chatTitle={chat.title}
+      agentId={chat.agent_id}
       initialMessages={messages || []}
       initialPrompt={typeof prompt === 'string' ? prompt : undefined}
     />
