@@ -20,6 +20,7 @@ export default async function ChatLayout({
   const { data: chats } = await supabase
     .from('chats')
     .select('*')
+    .eq('user_id', session.user.id)
     .order('updated_at', { ascending: false });
 
   return (
