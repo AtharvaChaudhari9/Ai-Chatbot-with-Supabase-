@@ -77,7 +77,8 @@ fi
 sudo tee $NGINX_CONF > /dev/null << 'EOF'
 server {
     listen 80;
-    server_name _;
+    server_name cognexa-ai.duckdns.org;
+
 
     # Adjust client_max_body_size to support uploading larger PDF/TXT files
     client_max_body_size 50M;
