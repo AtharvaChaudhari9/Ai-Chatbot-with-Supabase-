@@ -11,14 +11,23 @@ services:
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     ports:
       - "3000:3000"
-    env_file:
-      - ./frontend/.env.local
     environment:
       - PYTHON_BACKEND_URL=http://backend:8000
       - LOCAL_LLM_URL=http://ollama:11434
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_KEYCLOAK_ID=${AUTH_KEYCLOAK_ID}
+      - AUTH_KEYCLOAK_SECRET=${AUTH_KEYCLOAK_SECRET}
+      - AUTH_KEYCLOAK_ISSUER=${AUTH_KEYCLOAK_ISSUER}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - AUTH_TRUST_HOST=${AUTH_TRUST_HOST}
     depends_on:
       - backend
     restart: unless-stopped
+
 
   backend:
     container_name: ai-chatbot-backend
