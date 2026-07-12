@@ -15,9 +15,6 @@ services:
       - ./frontend/.env.local
     environment:
       - PYTHON_BACKEND_URL=http://backend:8000
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - LOCAL_LLM_URL=http://ollama:11434
     depends_on:
       - backend
