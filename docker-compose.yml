@@ -3,7 +3,6 @@ version: '3.8'
 services:
   frontend:
     container_name: ai-chatbot-frontend
-    image: ghcr.io/atharvachaudhari9/ai-chatbot-supabase/frontend:latest
     build:
       context: ./frontend
     ports:
@@ -19,7 +18,6 @@ services:
 
   backend:
     container_name: ai-chatbot-backend
-    image: ghcr.io/atharvachaudhari9/ai-chatbot-supabase/backend:latest
     build:
       context: ./backend
     ports:
