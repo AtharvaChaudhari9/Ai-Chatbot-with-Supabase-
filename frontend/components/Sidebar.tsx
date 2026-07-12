@@ -192,9 +192,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
     const keycloakBaseUrl = isLocal 
       ? 'http://localhost:8080' 
       : window.location.origin;
-    const postLogoutRedirectUri = isLocal
-      ? 'http://localhost:3000/api/auth/signin/keycloak'
-      : window.location.origin + '/api/auth/signin/keycloak';
+    const postLogoutRedirectUri = window.location.origin + '/login';
     
     let keycloakLogoutUrl = `${keycloakBaseUrl}/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
     
