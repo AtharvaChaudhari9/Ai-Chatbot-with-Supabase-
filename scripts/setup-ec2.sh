@@ -82,6 +82,7 @@ server {
 
     # Adjust client_max_body_size to support uploading larger PDF/TXT files
     client_max_body_size 50M;
+    large_client_header_buffers 4 32k;
 
     # Keycloak Realm routing (OIDC endpoints)
     location /realms/ {
