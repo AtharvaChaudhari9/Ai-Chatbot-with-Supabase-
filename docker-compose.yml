@@ -85,7 +85,7 @@ services:
       KC_DB_PASSWORD: keycloak_db_password
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_PROXY_HEADERS: xforwarded
+      KC_PROXY: edge
       KC_HOSTNAME: cognexa-ai.duckdns.org
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
@@ -93,6 +93,7 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak/themes:/opt/keycloak/themes
+
     depends_on:
       - keycloak-db
     restart: unless-stopped
