@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import ChatClient from './ChatClient';
 import { auth } from '@/auth';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

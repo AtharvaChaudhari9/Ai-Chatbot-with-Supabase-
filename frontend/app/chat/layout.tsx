@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import ChatLayoutClient from './LayoutClient';
 import { auth } from '@/auth';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ChatLayout({
   children,
 }: {
