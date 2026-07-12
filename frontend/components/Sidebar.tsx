@@ -41,6 +41,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [isStartingAgent, setIsStartingAgent] = useState<string | null>(null);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   
   const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>({});
 
@@ -171,20 +172,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     e.preventDefault();
-    
-    if (!confirm('Are you sure you want to delete this conversation?')) return;
-
-    setDeletingId(id);
-    try {
-      await deleteChat(id);
-      if (currentChatId === id) {
-        router.push('/chat');
-      }
-    } catch (err) {
-      console.error('Failed to delete chat:', err);
-    } finally {
-      setDeletingId(null);
-    }
+    setChatToDelete(id);
   };
 
   const handleLogout = async () => {
@@ -498,6 +486,46 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
           </button>
         </div>
       </aside>
+
+      {/* Premium Confirm Delete Modal */}
+      {chatToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-80 rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl transition-all">
+            <h3 className="text-base font-semibold text-white">Delete Chat?</h3>
+            <p className="mt-2 text-xs text-neutral-400">
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setChatToDelete(null)}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-400 hover:bg-neutral-900 hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const id = chatToDelete;
+                  setChatToDelete(null);
+                  setDeletingId(id);
+                  try {
+                    await deleteChat(id);
+                    if (currentChatId === id) {
+                      router.push('/chat');
+                    }
+                  } catch (err) {
+                    console.error('Failed to delete chat:', err);
+                  } finally {
+                    setDeletingId(null);
+                  }
+                }}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
