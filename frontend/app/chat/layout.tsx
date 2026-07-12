@@ -18,6 +18,8 @@ export default async function ChatLayout({
   }
 
 
+  console.log("DEBUG: Active session user ID =", session.user.id);
+
   // Fetch all chats for the authenticated user
   const { data: chats } = await supabase
     .from('chats')
