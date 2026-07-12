@@ -11,6 +11,8 @@ services:
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     ports:
       - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
     environment:
       - PYTHON_BACKEND_URL=http://backend:8000
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
@@ -84,6 +86,9 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME: cognexa-ai.duckdns.org
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
     ports:
       - "8080:8080"
     volumes:
@@ -91,6 +96,7 @@ services:
     depends_on:
       - keycloak-db
     restart: unless-stopped
+
 
 
 volumes:
