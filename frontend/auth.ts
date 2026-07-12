@@ -17,6 +17,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             clientId: process.env.AUTH_KEYCLOAK_ID,
             clientSecret: process.env.AUTH_KEYCLOAK_SECRET,
             issuer: process.env.AUTH_KEYCLOAK_ISSUER,
+            authorization: `${process.env.AUTH_KEYCLOAK_ISSUER}/protocol/openid-connect/auth`,
+            token: `http://keycloak:8080/realms/chatbot-realm/protocol/openid-connect/token`,
+            userinfo: `http://keycloak:8080/realms/chatbot-realm/protocol/openid-connect/userinfo`,
+            jwks_endpoint: `http://keycloak:8080/realms/chatbot-realm/protocol/openid-connect/certs`,
         }),
     ],
     callbacks: {
