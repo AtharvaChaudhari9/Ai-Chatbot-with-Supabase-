@@ -187,8 +187,16 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   };
 
   const handleLogout = async () => {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const keycloakBaseUrl = isLocal 
+      ? 'http://localhost:8080' 
+      : window.location.origin;
+    const postLogoutRedirectUri = window.location.origin;
+    
+    const keycloakLogoutUrl = `${keycloakBaseUrl}/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
+    
     await signOut({
-      callbackUrl: 'http://localhost:8080/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=http://localhost:3000',
+      callbackUrl: keycloakLogoutUrl,
     });
   };
 
