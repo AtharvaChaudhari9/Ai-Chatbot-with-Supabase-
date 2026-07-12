@@ -1,5 +1,19 @@
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
+import crypto from 'crypto';
+
+function getDeterministicUuid(input: string): string {
+  // Deterministic UUID v5-like generator using SHA-256 hash
+  const hash = crypto.createHash('sha256').update(input).digest('hex');
+  const parts = [
+    hash.substring(0, 8),
+    hash.substring(8, 12),
+    '4' + hash.substring(13, 16),
+    'a' + hash.substring(17, 20),
+    hash.substring(20, 32)
+  ];
+  return parts.join('-');
+}
 
 declare module "next-auth" {
   interface Session {
@@ -26,6 +40,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ],
     callbacks: {
         async jwt({ token, account }) {
+            // Force a deterministic UUID based on user's stable email/sub identifier
+            const stableKey = token.email || token.sub || "";
+            if (stableKey) {
+                token.sub = getDeterministicUuid(stableKey);
+            }
             console.log("DEBUG: JWT Callback - token.sub =", token.sub, "token.email =", token.email);
             // First-time login: store access and refresh tokens
             if (account) {
