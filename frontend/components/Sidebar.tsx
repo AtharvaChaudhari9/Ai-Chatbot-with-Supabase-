@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { createChat, renameChat, deleteChat } from '@/app/chat/actions';
 import { useAgent } from '@/app/chat/LayoutClient';
-import { signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 
 interface ChatItem {
@@ -31,6 +31,7 @@ interface SidebarProps {
 
 export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClose }: SidebarProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const { agents, refreshAgents, openAgentModal } = useAgent();
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -193,7 +194,11 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
       : window.location.origin;
     const postLogoutRedirectUri = window.location.origin;
     
-    const keycloakLogoutUrl = `${keycloakBaseUrl}/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
+    let keycloakLogoutUrl = `${keycloakBaseUrl}/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
+    
+    if (session?.idToken) {
+      keycloakLogoutUrl += `&id_token_hint=${session.idToken}`;
+    }
     
     await signOut({
       callbackUrl: keycloakLogoutUrl,

@@ -4,6 +4,7 @@ import Keycloak from "next-auth/providers/keycloak";
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
+    idToken?: string;
     error?: string;
   }
   interface User {
@@ -100,6 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             // Expose properties to client components securely
             session.accessToken = token.accessToken as string;
+            session.idToken = token.idToken as string;
             session.error = token.error as string | undefined;
             return session;
         },
