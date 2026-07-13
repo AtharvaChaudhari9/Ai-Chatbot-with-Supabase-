@@ -1,16 +1,17 @@
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
-import crypto from 'crypto';
 
-function getDeterministicUuid(input: string): string {
-  // Deterministic UUID v5-like generator using SHA-256 hash
-  const hash = crypto.createHash('sha256').update(input).digest('hex');
+async function getDeterministicUuid(input: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(input);
+  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   const parts = [
-    hash.substring(0, 8),
-    hash.substring(8, 12),
-    '4' + hash.substring(13, 16),
-    'a' + hash.substring(17, 20),
-    hash.substring(20, 32)
+    hashHex.substring(0, 8),
+    hashHex.substring(8, 12),
+    '4' + hashHex.substring(13, 16),
+    'a' + hashHex.substring(17, 20),
+    hashHex.substring(20, 32)
   ];
   return parts.join('-');
 }
@@ -40,11 +41,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ],
     callbacks: {
         async jwt({ token, account }) {
-            // Force a deterministic UUID based on user's stable email/sub identifier
-            const stableKey = token.email || token.sub || "";
-            if (stableKey) {
-                token.sub = getDeterministicUuid(stableKey);
-            }
             console.log("DEBUG: JWT Callback - token.sub =", token.sub, "token.email =", token.email);
             // First-time login: store access and refresh tokens
             if (account) {
@@ -116,8 +112,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
         async session({ session, token }) {
             if (session.user && token.sub) {
-                session.user.id = token.sub as string;
+                const stableKey = token.email || token.sub || "";
+                session.user.id = await getDeterministicUuid(stableKey as string);
                 session.user.roles = token.roles as string[] || [];
+                console.log("DEBUG: Session Callback - mapped stable UUID =", session.user.id, "for stableKey =", stableKey);
             }
             // Expose properties to client components securely
             session.accessToken = token.accessToken as string;
