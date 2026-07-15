@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -33,6 +33,82 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   const router = useRouter();
   const { data: session } = useSession();
   const { agents, refreshAgents, openAgentModal } = useAgent();
+
+  const [nickname, setNickname] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [editNickname, setEditNickname] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const data = await res.json();
+          setNickname(data.nickname);
+          setAvatarUrl(data.avatarUrl);
+          setEditNickname(data.nickname || '');
+          setEditAvatarUrl(data.avatarUrl || '');
+        }
+      } catch (e) {
+        console.error('Failed to load profile details:', e);
+      }
+    };
+    if (session?.user) {
+      fetchProfile();
+    }
+  }, [session]);
+
+  const getKeycloakBaseUrl = () => {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocal ? 'http://localhost:8080' : window.location.origin;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 250 * 1024) {
+        alert('Profile image size must be less than 250KB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setEditAvatarUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: editNickname.trim() || null,
+          avatarUrl: editAvatarUrl.trim() || null,
+        }),
+      });
+      if (res.ok) {
+        setNickname(editNickname.trim() || null);
+        setAvatarUrl(editAvatarUrl.trim() || null);
+        setIsSettingsOpen(false);
+      } else {
+        alert('Failed to update profile settings.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while saving profile.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -463,18 +539,44 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
         {/* Footer Profile summary & Logout */}
         <div className="mt-auto border-t border-neutral-900 bg-neutral-950 p-4 flex flex-col gap-2">
           {userEmail && (
-            <div className="flex items-center gap-2 px-1 py-1">
-              <div className="h-7 w-7 rounded-full bg-neutral-800 flex items-center justify-center font-bold text-xs text-neutral-300 border border-neutral-700 uppercase">
-                {userEmail.substring(0, 2)}
+            <div className="flex items-center justify-between gap-2 px-1 py-1">
+              <div className="flex items-center gap-2 min-w-0">
+                {/* Profile Picture */}
+                {avatarUrl || session?.user?.image ? (
+                  <img 
+                    src={avatarUrl || session?.user?.image || ''} 
+                    alt="Profile" 
+                    className="h-8 w-8 rounded-full border border-neutral-855 object-cover shrink-0 select-none"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-xs text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
+                    {(nickname || session?.user?.name || userEmail).substring(0, 2)}
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-bold text-neutral-200 truncate select-none leading-tight">
+                    {nickname || session?.user?.name || 'User Account'}
+                  </span>
+                  <span className="text-[9px] text-neutral-500 truncate leading-none">
+                    {userEmail}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-neutral-300 truncate">
-                  User Account
-                </span>
-                <span className="text-[10px] text-neutral-500 truncate leading-none">
-                  {userEmail}
-                </span>
-              </div>
+
+              {/* Settings Gear Icon */}
+              <button
+                type="button"
+                onClick={() => {
+                  setEditNickname(nickname || session?.user?.name || '');
+                  setEditAvatarUrl(avatarUrl || session?.user?.image || '');
+                  setIsSettingsOpen(true);
+                }}
+                className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-900 hover:text-white cursor-pointer transition-colors shrink-0"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
             </div>
           )}
           <button
@@ -523,6 +625,123 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-[420px] rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
+            <div className="flex items-center justify-between mb-5 border-b border-neutral-905 bg-neutral-950 border-neutral-900 pb-3">
+              <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider select-none">User Settings</h3>
+              <button 
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-900 hover:text-white cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-5">
+              {/* Profile Pic Upload Section */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative group">
+                  {editAvatarUrl ? (
+                    <img 
+                      src={editAvatarUrl} 
+                      alt="Avatar Preview" 
+                      className="h-16 w-16 rounded-full border-2 border-indigo-500/55 object-cover shadow-lg shadow-indigo-500/5 select-none"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-full bg-neutral-850 border border-neutral-800 flex items-center justify-center font-bold text-xl text-neutral-400 select-none">
+                      {(editNickname || session?.user?.name || userEmail || 'US').substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  
+                  {/* File Upload Input */}
+                  <label className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity text-[10px] text-neutral-200 font-bold select-none">
+                    Change
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange}
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+                <span className="text-[10px] text-neutral-500 font-medium">Click image to upload custom photo (Max 250KB)</span>
+              </div>
+
+              {/* Nickname Input field */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider select-none">Nickname</label>
+                <input
+                  type="text"
+                  maxLength={35}
+                  value={editNickname}
+                  onChange={(e) => setEditNickname(e.target.value)}
+                  placeholder="Enter display nickname"
+                  className="w-full rounded-xl border border-neutral-900 bg-neutral-900/40 px-3.5 py-2.5 text-xs text-neutral-250 placeholder-neutral-550 focus:border-neutral-800 focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* User Metadata Display */}
+              <div className="space-y-1 bg-neutral-900/10 border border-neutral-900 p-3.5 rounded-2xl text-[10px] text-neutral-500 select-none">
+                <div className="flex justify-between">
+                  <span className="font-semibold">Email:</span>
+                  <span className="text-neutral-400 truncate max-w-[200px]" title={userEmail}>{userEmail}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">ID:</span>
+                  <span className="text-neutral-400 font-mono text-[9px] truncate max-w-[200px]" title={session?.user?.id}>{session?.user?.id}</span>
+                </div>
+              </div>
+
+              {/* Keycloak Security Redirection */}
+              <div className="border-t border-neutral-900 pt-4 space-y-2.5">
+                <div className="space-y-1 select-none">
+                  <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Account Credentials & 2FA</h4>
+                  <p className="text-[9px] text-neutral-550 leading-relaxed font-semibold">
+                    Change your password or configure secure 2-Factor Authentication (OTP) with apps like Google Authenticator directly on the identity server.
+                  </p>
+                </div>
+                <a
+                  href={`${getKeycloakBaseUrl()}/realms/chatbot-realm/account/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-indigo-400 hover:text-indigo-350 px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer"
+                >
+                  Manage Password & 2FA
+                </a>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end gap-3 border-t border-neutral-900 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-neutral-400 hover:bg-neutral-900 hover:text-white transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

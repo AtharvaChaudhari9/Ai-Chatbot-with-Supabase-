@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 // Creates a client to be used inside server components, route handlers, and server actions
@@ -27,5 +28,14 @@ export async function createClient() {
         },
       },
     }
+  );
+}
+
+// Creates an admin/service client that is guaranteed to bypass Row Level Security
+// and is unaffected by browser cookie headers (for Keycloak/NextAuth authenticated API routes).
+export function createAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 }
