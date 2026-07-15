@@ -4,12 +4,12 @@ import { auth } from '@/auth';
 export async function POST() {
   try {
     const session = await auth();
-    // Validate session and Keycloak unique user ID presence
-    if (!session || !session.user || !session.user.keycloakId) {
+    // Validate session and email presence
+    if (!session || !session.user || !session.user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const keycloakId = session.user.keycloakId;
+    const userEmail = session.user.email;
     const keycloakInternalUrl = 'http://keycloak:8080';
 
     // 1. Fetch Keycloak Master Admin credentials for API access
@@ -38,8 +38,8 @@ export async function POST() {
     const tokenData = await tokenRes.json();
     const adminToken = tokenData.access_token;
 
-    // 3. Fetch current user metadata from chatbot realm to preserve existing required actions
-    const userRes = await fetch(`${keycloakInternalUrl}/admin/realms/chatbot-realm/users/${keycloakId}`, {
+    // 3. Lookup Keycloak user dynamically by email to resolve the correct internal UUID
+    const lookupRes = await fetch(`${keycloakInternalUrl}/admin/realms/chatbot-realm/users?email=${encodeURIComponent(userEmail)}`, {
       headers: {
         'Authorization': `Bearer ${adminToken}`,
         'Content-Type': 'application/json',
@@ -47,24 +47,31 @@ export async function POST() {
       cache: 'no-store',
     });
 
-    if (!userRes.ok) {
-      const errorText = await userRes.text();
-      console.error('Failed to fetch user metadata from Keycloak:', errorText);
+    if (!lookupRes.ok) {
+      const errorText = await lookupRes.text();
+      console.error('Failed to lookup user by email in Keycloak:', errorText);
       return NextResponse.json({ 
-        error: `Failed to locate user details: Keycloak returned Status ${userRes.status} - ${errorText || 'No description'}` 
+        error: `Failed to fetch user database profile: Keycloak returned Status ${lookupRes.status} - ${errorText || 'No description'}` 
       }, { status: 500 });
     }
 
-    const userData = await userRes.json();
-    const existingActions: string[] = userData.requiredActions || [];
+    const usersList = await lookupRes.json();
+    if (!Array.isArray(usersList) || usersList.length === 0) {
+      return NextResponse.json({ error: 'User account not found in Identity Server database.' }, { status: 404 });
+    }
+
+    // Extract correct user profile details
+    const targetUser = usersList[0];
+    const keycloakUUID = targetUser.id; // Real Keycloak UUID
+    const existingActions: string[] = targetUser.requiredActions || [];
 
     // 4. Append CONFIGURE_OTP required action if not already present
     if (!existingActions.includes('CONFIGURE_OTP')) {
       existingActions.push('CONFIGURE_OTP');
     }
 
-    // 5. Update user actions back to Keycloak
-    const updateRes = await fetch(`${keycloakInternalUrl}/admin/realms/chatbot-realm/users/${keycloakId}`, {
+    // 5. Update user required actions in Keycloak
+    const updateRes = await fetch(`${keycloakInternalUrl}/admin/realms/chatbot-realm/users/${keycloakUUID}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${adminToken}`,
