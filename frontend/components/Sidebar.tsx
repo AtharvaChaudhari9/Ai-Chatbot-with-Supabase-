@@ -51,6 +51,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
   const [isDisablingMfa, setIsDisablingMfa] = useState(false);
   const [mfaSetupSuccess, setMfaSetupSuccess] = useState(false);
+  const [isTriggeringPasswordChange, setIsTriggeringPasswordChange] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -195,6 +196,25 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
       alert('An error occurred while disabling 2FA.');
     } finally {
       setIsDisablingMfa(false);
+    }
+  };
+
+  const handleTriggerPasswordChange = async () => {
+    setIsTriggeringPasswordChange(true);
+    try {
+      const res = await fetch('/api/user/change-password', { method: 'POST' });
+      if (res.ok) {
+        alert('Password update triggered successfully. You will now be logged out to set your new password.');
+        await handleLogout();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to trigger password change.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while triggering password change.');
+    } finally {
+      setIsTriggeringPasswordChange(false);
     }
   };
 
@@ -803,14 +823,14 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 </div>
                 
                 <div className="flex gap-2">
-                  <a
-                    href={`${getKeycloakBaseUrl()}/realms/chatbot-realm/account/`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-neutral-350 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={handleTriggerPasswordChange}
+                    disabled={isTriggeringPasswordChange}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-neutral-350 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
                   >
-                    Change Password
-                  </a>
+                    {isTriggeringPasswordChange ? 'Processing...' : 'Change Password'}
+                  </button>
                   
                   {mfaEnabled ? (
                     <button
