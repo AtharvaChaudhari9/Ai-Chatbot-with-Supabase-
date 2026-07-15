@@ -52,6 +52,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
   const [isDisablingMfa, setIsDisablingMfa] = useState(false);
   const [mfaSetupSuccess, setMfaSetupSuccess] = useState(false);
   const [isTriggeringPasswordChange, setIsTriggeringPasswordChange] = useState(false);
+  const [isPasswordConfirmOpen, setIsPasswordConfirmOpen] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -204,7 +205,8 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
     try {
       const res = await fetch('/api/user/change-password', { method: 'POST' });
       if (res.ok) {
-        alert('Password update triggered successfully. You will now be logged out to set your new password.');
+        setIsPasswordConfirmOpen(false);
+        setIsSettingsOpen(false);
         await handleLogout();
       } else {
         const data = await res.json();
@@ -825,11 +827,10 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={handleTriggerPasswordChange}
-                    disabled={isTriggeringPasswordChange}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-neutral-350 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                    onClick={() => setIsPasswordConfirmOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-neutral-350 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer"
                   >
-                    {isTriggeringPasswordChange ? 'Processing...' : 'Change Password'}
+                    Change Password
                   </button>
                   
                   {mfaEnabled ? (
@@ -853,56 +854,8 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                   )}
                 </div>
 
-                {/* MFA Enrollment Form */}
-                {qrCodeUrl && tempSecret && (
-                  <div className="bg-neutral-900/10 border border-neutral-900 p-4 rounded-2xl space-y-4 animate-in slide-in-from-top-2 duration-200">
-                    <div className="flex flex-col items-center gap-2.5">
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Scan this QR Code</span>
-                      <img 
-                        src={qrCodeUrl} 
-                        alt="TOTP QR Code" 
-                        className="h-36 w-36 rounded-xl border border-neutral-800 bg-white p-2.5 shadow-lg select-none"
-                      />
-                      <div className="text-center space-y-1">
-                        <span className="text-[9px] text-neutral-500 leading-none block">Manual Secret Key:</span>
-                        <code className="text-[10px] text-indigo-400 font-mono font-bold tracking-wider select-all">{tempSecret}</code>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Enter 6-Digit Authenticator Code</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          maxLength={6}
-                          pattern="[0-9]*"
-                          inputMode="numeric"
-                          placeholder="000000"
-                          value={otpCodeInput}
-                          onChange={(e) => setOtpCodeInput(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="flex-1 text-center font-bold tracking-[0.25em] text-xs rounded-xl border border-neutral-900 bg-neutral-950 px-3 py-2 text-neutral-250 focus:border-neutral-800 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleVerifyAndEnableMfa}
-                          disabled={isVerifyingMfa}
-                          className="rounded-xl bg-indigo-650 hover:bg-indigo-600 text-[10px] text-white px-4 font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
-                        >
-                          {isVerifyingMfa ? 'Verifying...' : 'Verify'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {mfaSetupError && (
-                      <div className="text-[9px] text-red-400 font-semibold bg-red-950/15 border border-red-950/40 rounded-lg p-2 leading-relaxed animate-in fade-in duration-200">
-                        {mfaSetupError}
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {mfaSetupSuccess && (
-                  <div className="bg-emerald-950/15 border border-emerald-950/40 text-emerald-400 p-3 rounded-xl text-[10px] font-semibold leading-relaxed animate-in fade-in duration-200">
+                  <div className="bg-emerald-950/15 border border-emerald-950/40 text-emerald-400 p-3 rounded-xl text-[10px] font-semibold leading-relaxed animate-in fade-in duration-200 animate-pulse">
                     🎉 2-Factor Authentication has been successfully enabled! Your account is now fully secured.
                   </div>
                 )}
@@ -933,6 +886,111 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2FA Setup Modal */}
+      {qrCodeUrl && tempSecret && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-[380px] rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
+            <div className="flex items-center justify-between mb-5 border-b border-neutral-905 bg-neutral-950 border-neutral-900 pb-3">
+              <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider select-none">Set Up 2FA</h3>
+              <button 
+                type="button"
+                onClick={() => {
+                  setQrCodeUrl(null);
+                  setTempSecret(null);
+                  setOtpCodeInput('');
+                  setMfaSetupError('');
+                }}
+                className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-900 hover:text-white cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div className="flex flex-col items-center gap-3">
+                <span className="text-[10px] text-neutral-500 font-medium text-center leading-relaxed">Scan this QR Code with your Google Authenticator app:</span>
+                <img 
+                  src={qrCodeUrl} 
+                  alt="TOTP QR Code" 
+                  className="h-36 w-36 rounded-xl border border-neutral-800 bg-white p-2.5 shadow-lg select-none"
+                />
+                <div className="text-center space-y-1">
+                  <span className="text-[9px] text-neutral-550 leading-none block">Manual Secret Key:</span>
+                  <code className="text-[10px] text-indigo-400 font-mono font-bold tracking-wider select-all">{tempSecret}</code>
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyAndEnableMfa} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Enter 6-Digit Authenticator Code</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      placeholder="000000"
+                      value={otpCodeInput}
+                      onChange={(e) => setOtpCodeInput(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="flex-1 text-center font-bold tracking-[0.25em] text-xs rounded-xl border border-neutral-900 bg-neutral-950 px-3 py-2 text-neutral-250 focus:border-neutral-800 focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={isVerifyingMfa}
+                      className="rounded-xl bg-indigo-650 hover:bg-indigo-600 text-[10px] text-white px-4 font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50 animate-pulse"
+                    >
+                      {isVerifyingMfa ? 'Verifying...' : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+
+                {mfaSetupError && (
+                  <div className="text-[9px] text-red-400 font-semibold bg-red-950/15 border border-red-950/40 rounded-lg p-2 leading-relaxed animate-in fade-in duration-200">
+                    {mfaSetupError}
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Confirmation Modal */}
+      {isPasswordConfirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-[360px] rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
+            <div className="flex flex-col items-center text-center">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-5 h-5 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider select-none">Change Password</h3>
+              <p className="mt-2 text-[10px] text-neutral-500 leading-relaxed font-semibold">
+                To securely update your credentials, you will be logged out and directed to Keycloak's secure password reset portal.
+              </p>
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3 border-t border-neutral-900 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsPasswordConfirmOpen(false)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-neutral-400 hover:bg-neutral-900 hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isTriggeringPasswordChange}
+                onClick={handleTriggerPasswordChange}
+                className="rounded-xl bg-indigo-650 hover:bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isTriggeringPasswordChange ? 'Processing...' : 'Proceed'}
+              </button>
+            </div>
           </div>
         </div>
       )}
