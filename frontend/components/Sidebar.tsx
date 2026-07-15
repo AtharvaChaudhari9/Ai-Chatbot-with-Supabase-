@@ -109,6 +109,28 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
       setIsSavingProfile(false);
     }
   };
+
+  const [isEnablingMfa, setIsEnablingMfa] = useState(false);
+
+  const handleEnableMfa = async () => {
+    setIsEnablingMfa(true);
+    try {
+      const res = await fetch('/api/user/enable-mfa', { method: 'POST' });
+      if (res.ok) {
+        // Successful config. Force sign out to trigger Keycloak's configure TOTP prompt on re-login
+        await handleLogout();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to trigger 2FA configuration.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while enabling 2FA.');
+    } finally {
+      setIsEnablingMfa(false);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -699,22 +721,34 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 </div>
               </div>
 
-              {/* Keycloak Security Redirection */}
-              <div className="border-t border-neutral-900 pt-4 space-y-2.5">
+              {/* Keycloak Security Redirection & Dynamic 2FA Setup */}
+              <div className="border-t border-neutral-900 pt-4 space-y-3">
                 <div className="space-y-1 select-none">
-                  <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Account Credentials & 2FA</h4>
+                  <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Account Credentials & Security</h4>
                   <p className="text-[9px] text-neutral-550 leading-relaxed font-semibold">
-                    Change your password or configure secure 2-Factor Authentication (OTP) with apps like Google Authenticator directly on the identity server.
+                    Change your password directly on Keycloak, or set up secure 2-Factor Authentication (OTP) to prompt a QR code scan on your next login.
                   </p>
                 </div>
-                <a
-                  href={`${getKeycloakBaseUrl()}/realms/chatbot-realm/account/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-indigo-400 hover:text-indigo-350 px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer"
-                >
-                  Manage Password & 2FA
-                </a>
+                
+                <div className="flex gap-2">
+                  <a
+                    href={`${getKeycloakBaseUrl()}/realms/chatbot-realm/account/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-neutral-350 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer"
+                  >
+                    Change Password
+                  </a>
+                  
+                  <button
+                    type="button"
+                    onClick={handleEnableMfa}
+                    disabled={isEnablingMfa}
+                    className="flex-1 rounded-xl bg-indigo-650/45 hover:bg-indigo-600 border border-indigo-500/20 text-[10px] text-indigo-400 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                  >
+                    {isEnablingMfa ? 'Enabling...' : 'Set Up 2FA'}
+                  </button>
+                </div>
               </div>
 
               {/* Form Actions */}

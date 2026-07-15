@@ -24,6 +24,7 @@ declare module "next-auth" {
   }
   interface User {
     roles?: string[];
+    keycloakId?: string;
   }
 }
 
@@ -115,6 +116,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const stableKey = token.email || token.sub || "";
                 session.user.id = await getDeterministicUuid(stableKey as string);
                 session.user.roles = token.roles as string[] || [];
+                session.user.keycloakId = token.sub;
                 console.log("DEBUG: Session Callback - mapped stable UUID =", session.user.id, "for stableKey =", stableKey);
             }
             // Expose properties to client components securely
