@@ -36,10 +36,21 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
 
   const [nickname, setNickname] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editNickname, setEditNickname] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // In-app 2FA Setup states
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [tempSecret, setTempSecret] = useState<string | null>(null);
+  const [otpCodeInput, setOtpCodeInput] = useState('');
+  const [mfaSetupError, setMfaSetupError] = useState('');
+  const [isGeneratingMfa, setIsGeneratingMfa] = useState(false);
+  const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
+  const [isDisablingMfa, setIsDisablingMfa] = useState(false);
+  const [mfaSetupSuccess, setMfaSetupSuccess] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -49,6 +60,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
           const data = await res.json();
           setNickname(data.nickname);
           setAvatarUrl(data.avatarUrl);
+          setMfaEnabled(data.mfaEnabled || false);
           setEditNickname(data.nickname || '');
           setEditAvatarUrl(data.avatarUrl || '');
         }
@@ -110,24 +122,79 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
     }
   };
 
-  const [isEnablingMfa, setIsEnablingMfa] = useState(false);
-
-  const handleEnableMfa = async () => {
-    setIsEnablingMfa(true);
+  const handleStartMfaSetup = async () => {
+    setIsGeneratingMfa(true);
+    setMfaSetupError('');
+    setMfaSetupSuccess(false);
     try {
-      const res = await fetch('/api/user/enable-mfa', { method: 'POST' });
+      const res = await fetch('/api/user/mfa/generate', { method: 'POST' });
       if (res.ok) {
-        // Successful config. Force sign out to trigger Keycloak's configure TOTP prompt on re-login
-        await handleLogout();
-      } else {
         const data = await res.json();
-        alert(data.error || 'Failed to trigger 2FA configuration.');
+        setQrCodeUrl(data.qrUrl);
+        setTempSecret(data.secret);
+      } else {
+        setMfaSetupError('Failed to generate MFA setup details.');
       }
     } catch (e) {
       console.error(e);
-      alert('An error occurred while enabling 2FA.');
+      setMfaSetupError('An error occurred during MFA generation.');
     } finally {
-      setIsEnablingMfa(false);
+      setIsGeneratingMfa(false);
+    }
+  };
+
+  const handleVerifyAndEnableMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCodeInput.length !== 6) {
+      setMfaSetupError('Please enter a 6-digit code.');
+      return;
+    }
+    setMfaSetupError('');
+    setIsVerifyingMfa(true);
+    try {
+      const res = await fetch('/api/user/mfa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: otpCodeInput, secret: tempSecret }),
+      });
+      if (res.ok) {
+        setMfaEnabled(true);
+        setMfaSetupSuccess(true);
+        // Clear setup templates
+        setQrCodeUrl(null);
+        setTempSecret(null);
+        setOtpCodeInput('');
+      } else {
+        const data = await res.json();
+        setMfaSetupError(data.error || 'Invalid code. Please try again.');
+      }
+    } catch (e) {
+      console.error(e);
+      setMfaSetupError('An error occurred while verifying 2FA.');
+    } finally {
+      setIsVerifyingMfa(false);
+    }
+  };
+
+  const handleDisableMfa = async () => {
+    if (!confirm('Are you sure you want to disable 2-Factor Authentication? Your account will be less secure.')) {
+      return;
+    }
+    setIsDisablingMfa(true);
+    try {
+      const res = await fetch('/api/user/mfa/disable', { method: 'POST' });
+      if (res.ok) {
+        setMfaEnabled(false);
+        setMfaSetupSuccess(false);
+        alert('2-Factor Authentication has been disabled.');
+      } else {
+        alert('Failed to disable 2-Factor Authentication.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while disabling 2FA.');
+    } finally {
+      setIsDisablingMfa(false);
     }
   };
 
@@ -568,7 +635,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                   <img 
                     src={avatarUrl || session?.user?.image || ''} 
                     alt="Profile" 
-                    className="h-8 w-8 rounded-full border border-neutral-855 object-cover shrink-0 select-none"
+                    className="h-8 w-8 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 hover:ring-indigo-500/35 transition-all"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
@@ -580,7 +647,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                   <span className="text-[11px] font-bold text-neutral-200 truncate select-none leading-tight">
                     {nickname || session?.user?.name || 'User Account'}
                   </span>
-                  <span className="text-[9px] text-neutral-500 truncate leading-none">
+                  <span className="text-[9px] text-neutral-550 truncate leading-none">
                     {userEmail}
                   </span>
                 </div>
@@ -592,9 +659,14 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 onClick={() => {
                   setEditNickname(nickname || session?.user?.name || '');
                   setEditAvatarUrl(avatarUrl || session?.user?.image || '');
+                  setMfaSetupError('');
+                  setMfaSetupSuccess(false);
+                  setQrCodeUrl(null);
+                  setTempSecret(null);
+                  setOtpCodeInput('');
                   setIsSettingsOpen(true);
                 }}
-                className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-900 hover:text-white cursor-pointer transition-colors shrink-0"
+                className="p-1.5 rounded-lg text-neutral-550 hover:bg-neutral-900 hover:text-white cursor-pointer transition-colors shrink-0"
                 title="Settings"
               >
                 <Settings className="w-4 h-4" />
@@ -726,7 +798,7 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                 <div className="space-y-1 select-none">
                   <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Account Credentials & Security</h4>
                   <p className="text-[9px] text-neutral-550 leading-relaxed font-semibold">
-                    Change your password directly on Keycloak, or set up secure 2-Factor Authentication (OTP) to prompt a QR code scan on your next login.
+                    Change your password directly on Keycloak, or manage secure 2-Factor Authentication (OTP) using Authenticator Apps.
                   </p>
                 </div>
                 
@@ -740,15 +812,80 @@ export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClo
                     Change Password
                   </a>
                   
-                  <button
-                    type="button"
-                    onClick={handleEnableMfa}
-                    disabled={isEnablingMfa}
-                    className="flex-1 rounded-xl bg-indigo-650/45 hover:bg-indigo-600 border border-indigo-500/20 text-[10px] text-indigo-400 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
-                  >
-                    {isEnablingMfa ? 'Enabling...' : 'Set Up 2FA'}
-                  </button>
+                  {mfaEnabled ? (
+                    <button
+                      type="button"
+                      onClick={handleDisableMfa}
+                      disabled={isDisablingMfa}
+                      className="flex-1 rounded-xl bg-red-950/20 hover:bg-red-900 border border-red-900/30 text-[10px] text-red-400 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                    >
+                      {isDisablingMfa ? 'Disabling...' : 'Disable 2FA 🔒'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleStartMfaSetup}
+                      disabled={isGeneratingMfa || qrCodeUrl !== null}
+                      className="flex-1 rounded-xl bg-indigo-650/45 hover:bg-indigo-600 border border-indigo-500/20 text-[10px] text-indigo-400 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                    >
+                      {isGeneratingMfa ? 'Generating...' : 'Set Up 2FA'}
+                    </button>
+                  )}
                 </div>
+
+                {/* MFA Enrollment Form */}
+                {qrCodeUrl && tempSecret && (
+                  <div className="bg-neutral-900/10 border border-neutral-900 p-4 rounded-2xl space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex flex-col items-center gap-2.5">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Scan this QR Code</span>
+                      <img 
+                        src={qrCodeUrl} 
+                        alt="TOTP QR Code" 
+                        className="h-36 w-36 rounded-xl border border-neutral-800 bg-white p-2.5 shadow-lg select-none"
+                      />
+                      <div className="text-center space-y-1">
+                        <span className="text-[9px] text-neutral-500 leading-none block">Manual Secret Key:</span>
+                        <code className="text-[10px] text-indigo-400 font-mono font-bold tracking-wider select-all">{tempSecret}</code>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Enter 6-Digit Authenticator Code</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          pattern="[0-9]*"
+                          inputMode="numeric"
+                          placeholder="000000"
+                          value={otpCodeInput}
+                          onChange={(e) => setOtpCodeInput(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="flex-1 text-center font-bold tracking-[0.25em] text-xs rounded-xl border border-neutral-900 bg-neutral-950 px-3 py-2 text-neutral-250 focus:border-neutral-800 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyAndEnableMfa}
+                          disabled={isVerifyingMfa}
+                          className="rounded-xl bg-indigo-650 hover:bg-indigo-600 text-[10px] text-white px-4 font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifyingMfa ? 'Verifying...' : 'Verify'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {mfaSetupError && (
+                      <div className="text-[9px] text-red-400 font-semibold bg-red-950/15 border border-red-950/40 rounded-lg p-2 leading-relaxed animate-in fade-in duration-200">
+                        {mfaSetupError}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {mfaSetupSuccess && (
+                  <div className="bg-emerald-950/15 border border-emerald-950/40 text-emerald-400 p-3 rounded-xl text-[10px] font-semibold leading-relaxed animate-in fade-in duration-200">
+                    🎉 2-Factor Authentication has been successfully enabled! Your account is now fully secured.
+                  </div>
+                )}
               </div>
 
               {/* Form Actions */}
