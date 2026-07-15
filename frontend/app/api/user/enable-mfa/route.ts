@@ -50,7 +50,9 @@ export async function POST() {
     if (!userRes.ok) {
       const errorText = await userRes.text();
       console.error('Failed to fetch user metadata from Keycloak:', errorText);
-      return NextResponse.json({ error: 'Failed to locate user details' }, { status: 500 });
+      return NextResponse.json({ 
+        error: `Failed to locate user details: Keycloak returned Status ${userRes.status} - ${errorText || 'No description'}` 
+      }, { status: 500 });
     }
 
     const userData = await userRes.json();
@@ -76,7 +78,9 @@ export async function POST() {
     if (!updateRes.ok) {
       const errorText = await updateRes.text();
       console.error('Failed to update Keycloak user required actions:', errorText);
-      return NextResponse.json({ error: 'Failed to configure Multi-Factor Authentication prompt' }, { status: 500 });
+      return NextResponse.json({ 
+        error: `Failed to configure Multi-Factor Authentication prompt: Keycloak returned Status ${updateRes.status} - ${errorText || 'No description'}` 
+      }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
