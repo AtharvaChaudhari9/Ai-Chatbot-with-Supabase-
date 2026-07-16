@@ -246,7 +246,7 @@ export default function ChatLayoutClient({
                 maxLength={6}
                 pattern="[0-9]*"
                 inputMode="numeric"
-                placeholder="000000"
+                placeholder="••••••"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                 className="w-full text-center tracking-[0.75em] text-lg font-bold rounded-xl border border-neutral-900 bg-neutral-900/40 py-3 text-neutral-200 placeholder-neutral-800 focus:border-neutral-800 focus:outline-none transition-colors"

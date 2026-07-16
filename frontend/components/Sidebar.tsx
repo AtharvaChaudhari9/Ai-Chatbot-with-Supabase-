@@ -963,7 +963,7 @@ export default function Sidebar({
                       maxLength={6}
                       pattern="[0-9]*"
                       inputMode="numeric"
-                      placeholder="000000"
+                      placeholder="••••••"
                       value={otpCodeInput}
                       onChange={(e) => setOtpCodeInput(e.target.value.replace(/[^0-9]/g, ''))}
                       className="flex-1 text-center font-bold tracking-[0.25em] text-xs rounded-xl border border-neutral-900 bg-neutral-950 px-3 py-2 text-neutral-250 focus:border-neutral-800 focus:outline-none"
