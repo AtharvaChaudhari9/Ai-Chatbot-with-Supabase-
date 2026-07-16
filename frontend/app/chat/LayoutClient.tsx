@@ -211,24 +211,24 @@ export default function ChatLayoutClient({
             <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider mb-4">Two-Factor Authentication</h3>
 
             {/* User Profile Preview */}
-            <div className="flex flex-col items-center gap-1.5 mb-4 bg-neutral-900/30 border border-neutral-900/60 rounded-2xl px-5 py-3 w-full max-w-[250px] shadow-inner">
+            <div className="flex flex-col items-center gap-2 mb-4 bg-neutral-900/30 border border-neutral-900/60 rounded-2xl px-5 py-3.5 w-full max-w-[270px] shadow-inner">
               {initialAvatarUrl || defaultImage ? (
                 <img 
                   src={initialAvatarUrl || defaultImage} 
                   alt="Profile" 
-                  className="h-10 w-10 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 shadow-sm"
+                  className="h-14 w-14 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 shadow-sm"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-sm text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
+                <div className="h-14 w-14 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-base text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
                   {(initialNickname || defaultName || userEmail || '').substring(0, 2)}
                 </div>
               )}
               <div className="flex flex-col items-center min-w-0 text-center">
-                <span className="text-[11px] font-bold text-neutral-200 truncate max-w-[190px] leading-tight">
+                <span className="text-[13px] font-bold text-neutral-200 truncate max-w-[210px] leading-tight">
                   {initialNickname || defaultName || 'User Account'}
                 </span>
-                <span className="text-[9px] text-neutral-550 truncate max-w-[190px] mt-0.5 leading-none">
+                <span className="text-[10px] text-neutral-550 truncate max-w-[210px] mt-1 leading-none">
                   {userEmail}
                 </span>
               </div>
