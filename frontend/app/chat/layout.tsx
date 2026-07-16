@@ -27,8 +27,21 @@ export default async function ChatLayout({
     .eq('user_id', session.user.id)
     .order('updated_at', { ascending: false });
 
+  // Fetch user profile on the server side to prevent rendering lag
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nickname, avatar_url, mfa_enabled')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
   return (
-    <ChatLayoutClient chats={chats || []} userEmail={session.user.email ?? ''}>
+    <ChatLayoutClient 
+      chats={chats || []} 
+      userEmail={session.user.email ?? ''}
+      initialNickname={profile?.nickname || null}
+      initialAvatarUrl={profile?.avatar_url || null}
+      initialMfaEnabled={profile?.mfa_enabled || false}
+    >
       {children}
     </ChatLayoutClient>
   );

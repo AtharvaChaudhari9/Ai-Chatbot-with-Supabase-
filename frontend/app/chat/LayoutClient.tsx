@@ -56,10 +56,16 @@ export const useAgent = () => useContext(AgentContext);
 export default function ChatLayoutClient({
   chats,
   userEmail,
+  initialNickname,
+  initialAvatarUrl,
+  initialMfaEnabled,
   children,
 }: {
   chats: any[];
   userEmail?: string;
+  initialNickname: string | null;
+  initialAvatarUrl: string | null;
+  initialMfaEnabled: boolean;
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,14 +78,14 @@ export default function ChatLayoutClient({
   const [editAgentId, setEditAgentId] = useState<string | null>(null);
 
   // MFA states and verifications
-  const [isMfaEnabled, setIsMfaEnabled] = useState(false);
+  const [isMfaEnabled, setIsMfaEnabled] = useState(initialMfaEnabled);
   const [mfaVerified, setMfaVerified] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('mfa_verified') === 'true';
     }
     return false;
   });
-  const [isMfaLoading, setIsMfaLoading] = useState(true);
+  const [isMfaLoading, setIsMfaLoading] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState('');
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
@@ -255,6 +261,9 @@ export default function ChatLayoutClient({
               chats={chats}
               currentChatId={currentChatId}
               userEmail={userEmail}
+              initialNickname={initialNickname}
+              initialAvatarUrl={initialAvatarUrl}
+              initialMfaEnabled={initialMfaEnabled}
               isOpen={sidebarOpen}
               onClose={() => setSidebarOpen(false)}
             />

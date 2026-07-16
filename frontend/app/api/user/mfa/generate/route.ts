@@ -21,7 +21,7 @@ export async function POST() {
     const email = session.user.email;
     const secret = generateRandomBase32Secret(16); // 16 base32 characters is standard 80-bit length
     const otpauthUri = `otpauth://totp/CognexaChatbot:${encodeURIComponent(email)}?secret=${secret}&issuer=CognexaChatbot`;
-    const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chld=M|0&chl=${encodeURIComponent(otpauthUri)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUri)}`;
 
     return NextResponse.json({
       secret,

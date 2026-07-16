@@ -42,8 +42,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }),
     ],
     callbacks: {
-        async jwt({ token, account }) {
+        async jwt({ token, account, profile }) {
             console.log("DEBUG: JWT Callback - token.sub =", token.sub, "token.email =", token.email);
+            if (profile) {
+                console.log("DEBUG: JWT Callback - OIDC profile =", JSON.stringify(profile));
+                if (profile.picture) {
+                    token.picture = profile.picture;
+                }
+            }
             // First-time login: store access and refresh tokens
             if (account) {
                 let roles: string[] = [];

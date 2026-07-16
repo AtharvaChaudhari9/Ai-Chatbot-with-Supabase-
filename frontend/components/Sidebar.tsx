@@ -25,18 +25,30 @@ interface SidebarProps {
   chats: ChatItem[];
   currentChatId?: string;
   userEmail?: string;
+  initialNickname: string | null;
+  initialAvatarUrl: string | null;
+  initialMfaEnabled: boolean;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function Sidebar({ chats, currentChatId, userEmail, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ 
+  chats, 
+  currentChatId, 
+  userEmail, 
+  initialNickname, 
+  initialAvatarUrl, 
+  initialMfaEnabled, 
+  isOpen, 
+  onClose 
+}: SidebarProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const { agents, refreshAgents, openAgentModal } = useAgent();
 
-  const [nickname, setNickname] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [nickname, setNickname] = useState<string | null>(initialNickname);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [mfaEnabled, setMfaEnabled] = useState(initialMfaEnabled);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editNickname, setEditNickname] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
