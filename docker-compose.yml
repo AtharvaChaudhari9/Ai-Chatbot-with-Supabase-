@@ -10,6 +10,7 @@ services:
     environment:
       - PYTHON_BACKEND_URL=http://backend:8000
       - LOCAL_LLM_URL=http://ollama:11434
+      - AUTH_TRUST_HOST=true
     extra_hosts:
       - "cognexa-ai.duckdns.org:host-gateway"
     depends_on:
