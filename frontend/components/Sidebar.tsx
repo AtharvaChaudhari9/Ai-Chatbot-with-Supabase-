@@ -71,6 +71,9 @@ export default function Sidebar({
   const [mfaSetupSuccess, setMfaSetupSuccess] = useState(false);
   const [isTriggeringPasswordChange, setIsTriggeringPasswordChange] = useState(false);
   const [isPasswordConfirmOpen, setIsPasswordConfirmOpen] = useState(false);
+  const [isDisableMfaConfirmOpen, setIsDisableMfaConfirmOpen] = useState(false);
+  const [isDisableMfaSuccessOpen, setIsDisableMfaSuccessOpen] = useState(false);
+  const [mfaDisableError, setMfaDisableError] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -200,22 +203,22 @@ export default function Sidebar({
   };
 
   const handleDisableMfa = async () => {
-    if (!confirm('Are you sure you want to disable 2-Factor Authentication? Your account will be less secure.')) {
-      return;
-    }
+    setMfaDisableError('');
     setIsDisablingMfa(true);
     try {
       const res = await fetch('/api/user/mfa/disable', { method: 'POST' });
       if (res.ok) {
         setMfaEnabled(false);
         setMfaSetupSuccess(false);
-        alert('2-Factor Authentication has been disabled.');
+        setIsDisableMfaConfirmOpen(false);
+        setIsDisableMfaSuccessOpen(true);
       } else {
-        alert('Failed to disable 2-Factor Authentication.');
+        const data = await res.json();
+        setMfaDisableError(data.error || 'Failed to disable 2-Factor Authentication.');
       }
     } catch (e) {
       console.error(e);
-      alert('An error occurred while disabling 2FA.');
+      setMfaDisableError('An error occurred while disabling 2FA.');
     } finally {
       setIsDisablingMfa(false);
     }
@@ -860,11 +863,14 @@ export default function Sidebar({
                   {mfaEnabled ? (
                     <button
                       type="button"
-                      onClick={handleDisableMfa}
+                      onClick={() => {
+                        setMfaDisableError('');
+                        setIsDisableMfaConfirmOpen(true);
+                      }}
                       disabled={isDisablingMfa}
                       className="flex-1 rounded-xl bg-red-950/20 hover:bg-red-900 border border-red-900/30 text-[10px] text-red-400 hover:text-white px-3.5 py-2.5 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
                     >
-                      {isDisablingMfa ? 'Disabling...' : 'Disable 2FA 🔒'}
+                      Disable 2FA 🔒
                     </button>
                   ) : (
                     <button
@@ -1013,6 +1019,74 @@ export default function Sidebar({
                 className="rounded-xl bg-indigo-650 hover:bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isTriggeringPasswordChange ? 'Processing...' : 'Proceed'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disable 2FA Confirmation Modal */}
+      {isDisableMfaConfirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-[360px] rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
+            <div className="flex flex-col items-center text-center">
+              <div className="h-12 w-12 rounded-2xl bg-red-950/20 border border-red-900/30 flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-5 h-5 text-red-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider select-none">Disable 2FA?</h3>
+              <p className="mt-2 text-[10px] text-neutral-550 leading-relaxed font-semibold">
+                Are you sure you want to disable 2-Factor Authentication? This will make your account significantly less secure.
+              </p>
+            </div>
+
+            {mfaDisableError && (
+              <div className="mt-4 rounded-xl border border-red-950/40 bg-red-950/15 p-2.5 text-[9px] font-semibold text-red-400 leading-normal">
+                {mfaDisableError}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3 border-t border-neutral-900 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsDisableMfaConfirmOpen(false)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-neutral-400 hover:bg-neutral-900 hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDisableMfa}
+                disabled={isDisablingMfa}
+                className="rounded-xl bg-red-650 hover:bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isDisablingMfa ? 'Disabling...' : 'Yes, Disable'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disable 2FA Success Modal */}
+      {isDisableMfaSuccessOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-[360px] rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
+            <div className="flex flex-col items-center text-center">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-950/20 border border-emerald-900/30 flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="w-5 h-5 text-emerald-400"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider select-none">MFA Disabled</h3>
+              <p className="mt-2 text-[10px] text-neutral-550 leading-relaxed font-semibold">
+                2-Factor Authentication has been successfully disabled from your account settings.
+              </p>
+            </div>
+
+            <div className="mt-6 border-t border-neutral-900 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsDisableMfaSuccessOpen(false)}
+                className="w-full rounded-xl bg-indigo-650 hover:bg-indigo-600 text-xs font-bold text-white py-2 transition-colors cursor-pointer text-center"
+              >
+                Close
               </button>
             </div>
           </div>
