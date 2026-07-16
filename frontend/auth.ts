@@ -38,6 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token: `http://keycloak:8080/realms/chatbot-realm/protocol/openid-connect/token`,
             userinfo: `http://keycloak:8080/realms/chatbot-realm/protocol/openid-connect/userinfo`,
             jwks_endpoint: `http://keycloak:8080/realms/chatbot-realm/protocol/openid-connect/certs`,
+            checks: ["state"],
         }),
     ],
     callbacks: {
