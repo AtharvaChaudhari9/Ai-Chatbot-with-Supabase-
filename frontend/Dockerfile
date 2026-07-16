@@ -11,8 +11,6 @@ RUN npm ci
 # Copy application files
 COPY . .
 
-
-
 # Compile Next.js production build
 RUN npm run build
 
@@ -23,14 +21,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Copy built artifacts and runtime dependencies
-COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/.next /app/.next
-COPY --from=builder /app/public /app/public
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/next.config.ts ./next.config.ts
+# Copy built standalone folder and static files (saves copying 500MB+ node_modules)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/.env* ./
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# Next.js standalone build outputs a compact self-contained server.js file
+CMD ["node", "server.js"]
