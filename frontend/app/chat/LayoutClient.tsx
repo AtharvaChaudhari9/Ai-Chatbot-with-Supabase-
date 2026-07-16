@@ -56,6 +56,8 @@ export const useAgent = () => useContext(AgentContext);
 export default function ChatLayoutClient({
   chats,
   userEmail,
+  defaultName,
+  defaultImage,
   initialNickname,
   initialAvatarUrl,
   initialMfaEnabled,
@@ -63,6 +65,8 @@ export default function ChatLayoutClient({
 }: {
   chats: any[];
   userEmail?: string;
+  defaultName: string;
+  defaultImage: string;
   initialNickname: string | null;
   initialAvatarUrl: string | null;
   initialMfaEnabled: boolean;
@@ -261,9 +265,16 @@ export default function ChatLayoutClient({
               chats={chats}
               currentChatId={currentChatId}
               userEmail={userEmail}
+              defaultName={defaultName}
+              defaultImage={defaultImage}
               initialNickname={initialNickname}
               initialAvatarUrl={initialAvatarUrl}
               initialMfaEnabled={initialMfaEnabled}
+              onMfaEnabled={() => {
+                setIsMfaEnabled(true);
+                sessionStorage.setItem('mfa_verified', 'true');
+                setMfaVerified(true);
+              }}
               isOpen={sidebarOpen}
               onClose={() => setSidebarOpen(false)}
             />

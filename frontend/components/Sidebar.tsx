@@ -25,9 +25,12 @@ interface SidebarProps {
   chats: ChatItem[];
   currentChatId?: string;
   userEmail?: string;
+  defaultName: string;
+  defaultImage: string;
   initialNickname: string | null;
   initialAvatarUrl: string | null;
   initialMfaEnabled: boolean;
+  onMfaEnabled?: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -36,9 +39,12 @@ export default function Sidebar({
   chats, 
   currentChatId, 
   userEmail, 
+  defaultName,
+  defaultImage,
   initialNickname, 
   initialAvatarUrl, 
   initialMfaEnabled, 
+  onMfaEnabled,
   isOpen, 
   onClose 
 }: SidebarProps) {
@@ -178,6 +184,9 @@ export default function Sidebar({
         setQrCodeUrl(null);
         setTempSecret(null);
         setOtpCodeInput('');
+        if (onMfaEnabled) {
+          onMfaEnabled();
+        }
       } else {
         const data = await res.json();
         setMfaSetupError(data.error || 'Invalid code. Please try again.');
@@ -375,6 +384,9 @@ export default function Sidebar({
   };
 
   const handleLogout = async () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('mfa_verified');
+    }
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const keycloakBaseUrl = isLocal 
       ? 'http://localhost:8080' 
@@ -665,21 +677,21 @@ export default function Sidebar({
             <div className="flex items-center justify-between gap-2 px-1 py-1">
               <div className="flex items-center gap-2 min-w-0">
                 {/* Profile Picture */}
-                {avatarUrl || session?.user?.image ? (
+                {avatarUrl || defaultImage ? (
                   <img 
-                    src={avatarUrl || session?.user?.image || ''} 
+                    src={avatarUrl || defaultImage} 
                     alt="Profile" 
                     className="h-8 w-8 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 hover:ring-indigo-500/35 transition-all"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div className="h-8 w-8 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-xs text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
-                    {(nickname || session?.user?.name || userEmail).substring(0, 2)}
+                    {(nickname || defaultName || userEmail || '').substring(0, 2)}
                   </div>
                 )}
                 <div className="flex flex-col min-w-0">
                   <span className="text-[11px] font-bold text-neutral-200 truncate select-none leading-tight">
-                    {nickname || session?.user?.name || 'User Account'}
+                    {nickname || defaultName || 'User Account'}
                   </span>
                   <span className="text-[9px] text-neutral-550 truncate leading-none">
                     {userEmail}
@@ -691,8 +703,8 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => {
-                  setEditNickname(nickname || session?.user?.name || '');
-                  setEditAvatarUrl(avatarUrl || session?.user?.image || '');
+                  setEditNickname(nickname || defaultName || '');
+                  setEditAvatarUrl(avatarUrl || defaultImage || '');
                   setMfaSetupError('');
                   setMfaSetupSuccess(false);
                   setQrCodeUrl(null);
@@ -784,7 +796,7 @@ export default function Sidebar({
                     />
                   ) : (
                     <div className="h-16 w-16 rounded-full bg-neutral-850 border border-neutral-800 flex items-center justify-center font-bold text-xl text-neutral-400 select-none">
-                      {(editNickname || session?.user?.name || userEmail || 'US').substring(0, 2).toUpperCase()}
+                      {(editNickname || defaultName || userEmail || 'US').substring(0, 2).toUpperCase()}
                     </div>
                   )}
                   

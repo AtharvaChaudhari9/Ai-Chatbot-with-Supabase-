@@ -38,6 +38,8 @@ export default async function ChatLayout({
     <ChatLayoutClient 
       chats={chats || []} 
       userEmail={session.user.email ?? ''}
+      defaultName={session.user.name ?? ''}
+      defaultImage={session.user.image ?? ''}
       initialNickname={profile?.nickname || null}
       initialAvatarUrl={profile?.avatar_url || null}
       initialMfaEnabled={profile?.mfa_enabled || false}

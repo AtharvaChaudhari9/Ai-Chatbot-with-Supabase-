@@ -5,6 +5,10 @@ import { useEffect } from "react";
 
 export default function LoginPage() {
   useEffect(() => {
+    // Clear residual 2FA verification states on new login session
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('mfa_verified');
+    }
     // Automatically trigger sign-in with Keycloak on mount
     signIn("keycloak", { callbackUrl: "/chat" });
   }, []);
