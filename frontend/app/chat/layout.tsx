@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import ChatLayoutClient from './LayoutClient';
 import { auth } from '@/auth';
 
@@ -10,7 +10,7 @@ export default async function ChatLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
 
   if (!session || !session.user) {

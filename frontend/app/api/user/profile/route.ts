@@ -12,7 +12,7 @@ export async function GET() {
     const supabase = createAdminClient();
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('nickname, avatar_url')
+      .select('nickname, avatar_url, mfa_enabled')
       .eq('id', session.user.id)
       .maybeSingle();
 
@@ -24,6 +24,7 @@ export async function GET() {
     return NextResponse.json({
       nickname: profile?.nickname || null,
       avatarUrl: profile?.avatar_url || null,
+      mfaEnabled: profile?.mfa_enabled || false,
     });
   } catch (err: any) {
     console.error('API Error in GET /api/user/profile:', err);
