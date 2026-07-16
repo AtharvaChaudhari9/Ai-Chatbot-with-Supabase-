@@ -203,13 +203,38 @@ export default function ChatLayoutClient({
 
         {/* Centered MFA Verification Card */}
         <div className="z-10 w-full max-w-sm rounded-3xl border border-neutral-900 bg-neutral-950/60 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="flex flex-col items-center mb-6">
+          <div className="flex flex-col items-center mb-5">
             {/* Visual lock icon */}
             <div className="h-12 w-12 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-3">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-5 h-5 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider">Two-Factor Authentication</h3>
-            <p className="text-[10px] text-neutral-500 text-center mt-2.5 font-semibold leading-relaxed">
+            <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider mb-4">Two-Factor Authentication</h3>
+
+            {/* User Profile Preview */}
+            <div className="flex flex-col items-center gap-1.5 mb-4 bg-neutral-900/30 border border-neutral-900/60 rounded-2xl px-5 py-3 w-full max-w-[250px] shadow-inner">
+              {initialAvatarUrl || defaultImage ? (
+                <img 
+                  src={initialAvatarUrl || defaultImage} 
+                  alt="Profile" 
+                  className="h-10 w-10 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-sm text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
+                  {(initialNickname || defaultName || userEmail || '').substring(0, 2)}
+                </div>
+              )}
+              <div className="flex flex-col items-center min-w-0 text-center">
+                <span className="text-[11px] font-bold text-neutral-200 truncate max-w-[190px] leading-tight">
+                  {initialNickname || defaultName || 'User Account'}
+                </span>
+                <span className="text-[9px] text-neutral-550 truncate max-w-[190px] mt-0.5 leading-none">
+                  {userEmail}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-neutral-500 text-center font-semibold leading-relaxed">
               Enter the 6-digit verification code from your Google Authenticator app to unlock your chatbot account.
             </p>
           </div>
