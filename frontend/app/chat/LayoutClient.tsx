@@ -202,44 +202,44 @@ export default function ChatLayoutClient({
         <div className="absolute bottom-[-20%] right-[-20%] h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
         {/* Centered MFA Verification Card */}
-        <div className="z-10 w-full max-w-sm rounded-3xl border border-neutral-900 bg-neutral-950/60 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="z-10 w-full max-w-[420px] rounded-3xl border border-neutral-900 bg-neutral-950/60 p-10 shadow-2xl backdrop-blur-xl">
           <div className="flex flex-col items-center mb-5">
             {/* Visual lock icon */}
-            <div className="h-12 w-12 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-5 h-5 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <div className="h-14 w-14 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-6 h-6 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider mb-4">Two-Factor Authentication</h3>
+            <h3 className="text-sm font-bold text-neutral-200 uppercase tracking-wider mb-5">Two-Factor Authentication</h3>
 
             {/* User Profile Preview */}
-            <div className="flex flex-col items-center gap-2 mb-4 bg-neutral-900/30 border border-neutral-900/60 rounded-2xl px-5 py-3.5 w-full max-w-[270px] shadow-inner">
+            <div className="flex flex-col items-center gap-3 mb-5 bg-neutral-900/30 border border-neutral-900/60 rounded-2xl px-6 py-4 w-full max-w-[320px] shadow-inner">
               {initialAvatarUrl || defaultImage ? (
                 <img 
                   src={initialAvatarUrl || defaultImage} 
                   alt="Profile" 
-                  className="h-14 w-14 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 shadow-sm"
+                  className="h-16 w-16 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 shadow-sm"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="h-14 w-14 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-base text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
+                <div className="h-16 w-16 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-lg text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
                   {(initialNickname || defaultName || userEmail || '').substring(0, 2)}
                 </div>
               )}
               <div className="flex flex-col items-center min-w-0 text-center">
-                <span className="text-[13px] font-bold text-neutral-200 truncate max-w-[210px] leading-tight">
+                <span className="text-sm font-bold text-neutral-200 truncate max-w-[250px] leading-tight">
                   {initialNickname || defaultName || 'User Account'}
                 </span>
-                <span className="text-[10px] text-neutral-550 truncate max-w-[210px] mt-1 leading-none">
+                <span className="text-[11px] text-neutral-550 truncate max-w-[250px] mt-1 leading-none">
                   {userEmail}
                 </span>
               </div>
             </div>
 
-            <p className="text-[10px] text-neutral-500 text-center font-semibold leading-relaxed">
+            <p className="text-xs text-neutral-500 text-center font-semibold leading-relaxed">
               Enter the 6-digit verification code from your Google Authenticator app to unlock your chatbot account.
             </p>
           </div>
 
-          <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
+          <form onSubmit={handleVerifyLoginOtp} className="space-y-5">
             <div className="space-y-1.5">
               <input
                 type="text"
@@ -249,13 +249,13 @@ export default function ChatLayoutClient({
                 placeholder="••••••"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full text-center tracking-[0.75em] text-lg font-bold rounded-xl border border-neutral-900 bg-neutral-900/40 py-3 text-neutral-200 placeholder-neutral-800 focus:border-neutral-800 focus:outline-none transition-colors"
+                className="w-full text-center tracking-[0.75em] text-2xl font-bold rounded-xl border border-neutral-900 bg-neutral-900/40 py-4 text-neutral-200 placeholder-neutral-800 focus:border-neutral-800 focus:outline-none transition-colors"
                 autoFocus
               />
             </div>
 
             {otpError && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-red-950/40 bg-red-950/15 text-red-400 p-3 text-[10px] font-semibold leading-relaxed animate-in fade-in duration-200">
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-950/40 bg-red-950/15 text-red-400 p-3.5 text-xs font-semibold leading-relaxed animate-in fade-in duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-4 h-4 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 <span>{otpError}</span>
               </div>
@@ -264,7 +264,7 @@ export default function ChatLayoutClient({
             <button
               type="submit"
               disabled={isVerifyingOtp}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-650 hover:bg-indigo-600 text-xs text-white py-3 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-650 hover:bg-indigo-600 text-sm text-white py-4 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
             >
               {isVerifyingOtp ? (
                 <>
