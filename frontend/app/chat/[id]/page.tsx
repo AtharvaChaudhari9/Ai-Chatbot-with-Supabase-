@@ -1,5 +1,5 @@
 import { redirect, notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import ChatClient from './ChatClient';
 import { auth } from '@/auth';
 
@@ -16,7 +16,7 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const prompt = resolvedSearchParams?.prompt;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Validate user authentication session
   const session = await auth();

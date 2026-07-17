@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   let createdDocId: string | null = null;
   let uploadedFilePath: string | null = null;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   try {
     // 1. Authenticate user session via NextAuth

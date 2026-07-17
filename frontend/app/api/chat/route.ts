@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { generateGeminiResponse } from '@/lib/gemini';
 import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Authenticate user session via NextAuth
     const session = await auth();
