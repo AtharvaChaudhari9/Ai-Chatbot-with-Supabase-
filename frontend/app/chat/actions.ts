@@ -1,12 +1,12 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 
 export async function createChat(agentId?: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
 
   if (!session || !session.user) {
@@ -34,7 +34,7 @@ export async function createChat(agentId?: string) {
 }
 
 export async function renameChat(chatId: string, title: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
 
   if (!session || !session.user) {
@@ -55,7 +55,7 @@ export async function renameChat(chatId: string, title: string) {
 }
 
 export async function deleteChat(chatId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
 
   if (!session || !session.user) {
@@ -76,13 +76,14 @@ export async function deleteChat(chatId: string) {
 }
 
 export async function getChats() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
   if (!session || !session.user) return [];
 
   const { data, error } = await supabase
     .from('chats')
     .select('*')
+    .eq('user_id', session.user.id)
     .order('updated_at', { ascending: false });
 
   if (error) return [];
@@ -90,7 +91,7 @@ export async function getChats() {
 }
 
 export async function createChatAndGetId(agentId?: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
 
   if (!session || !session.user) {
@@ -118,7 +119,7 @@ export async function createChatAndGetId(agentId?: string) {
 }
 
 export async function createMessage(chatId: string, role: 'user' | 'assistant', content: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const session = await auth();
 
   if (!session || !session.user) {

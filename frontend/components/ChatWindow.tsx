@@ -273,7 +273,7 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
   };
 
   return (
-    <div className="flex flex-1 flex-col h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden relative">
+    <div data-testid="chat-window" className="flex flex-1 flex-col h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden relative">
 
       {/* Top Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-900 bg-neutral-950/80 px-4 md:px-6 backdrop-blur-md z-10">
@@ -288,8 +288,16 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
           <div className="flex flex-col min-w-0">
             <h2 className="text-sm font-semibold text-neutral-200 truncate pr-4 flex items-center gap-1.5">
               {agentDetails && (
-                <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm select-none shrink-0">
-                  {agentDetails.avatar_url && agentDetails.avatar_url.length <= 8 && !agentDetails.avatar_url.includes('/') ? agentDetails.avatar_url : '🤖'}
+                <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm select-none shrink-0 overflow-hidden">
+                  {agentDetails.avatar_url && (agentDetails.avatar_url.startsWith('data:image/') || agentDetails.avatar_url.includes('/') || agentDetails.avatar_url.startsWith('http')) ? (
+                    <img 
+                      src={agentDetails.avatar_url.startsWith('data:') || agentDetails.avatar_url.startsWith('http') ? agentDetails.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agentDetails.avatar_url}`}
+                      alt={agentDetails.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span>{agentDetails.avatar_url || '🤖'}</span>
+                  )}
                 </span>
               )}
               <span>{chatTitle}</span>
@@ -323,12 +331,16 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
       <div className="flex-1 overflow-y-auto overflow-x-hidden divide-y divide-neutral-900/10">
         {messages.length === 0 ? (
           /* Empty Chat Welcome State */
-          <div className="flex flex-col items-center justify-center min-h-[75vh] px-4 text-center max-w-2xl mx-auto animate-in fade-in duration-300">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg mb-6 ring-4 ring-indigo-950/50">
-              {agentDetails ? (
-                <span className="text-3xl select-none">{agentDetails.avatar_url && agentDetails.avatar_url.length <= 8 && !agentDetails.avatar_url.includes('/') ? agentDetails.avatar_url : '🤖'}</span>
+          <div data-testid="empty-state" className="flex flex-col items-center justify-center min-h-[75vh] px-4 text-center max-w-2xl mx-auto animate-in fade-in duration-300">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg mb-6 ring-4 ring-indigo-950/50 overflow-hidden">
+              {agentDetails && (agentDetails.avatar_url && (agentDetails.avatar_url.startsWith('data:image/') || agentDetails.avatar_url.includes('/') || agentDetails.avatar_url.startsWith('http'))) ? (
+                <img 
+                  src={agentDetails.avatar_url.startsWith('data:') || agentDetails.avatar_url.startsWith('http') ? agentDetails.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agentDetails.avatar_url}`}
+                  alt={agentDetails.name}
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <Sparkles className="w-7 h-7 text-white" />
+                <span className="text-3xl select-none">{agentDetails ? agentDetails.avatar_url || '🤖' : '✨'}</span>
               )}
             </div>
 
@@ -368,7 +380,7 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
           </div>
         ) : (
           /* Render message history list */
-          <div className="flex flex-col py-2">
+          <div data-testid="message-list" className="flex flex-col py-2">
             {messages.map((msg) => (
               <MessageBubble
                 key={msg.id}
@@ -380,12 +392,16 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
 
             {/* Loading/generating indicator */}
             {isLoading && (
-              <div className="flex w-full gap-4 py-5 px-4 md:px-6 bg-neutral-900/35 border-y border-neutral-900/50">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-md animate-pulse">
-                  {agentDetails ? (
-                    <span className="text-lg select-none">{agentDetails.avatar_url && agentDetails.avatar_url.length <= 8 && !agentDetails.avatar_url.includes('/') ? agentDetails.avatar_url : '🤖'}</span>
+              <div data-testid="loading-spinner" className="flex w-full gap-4 py-5 px-4 md:px-6 bg-neutral-900/35 border-y border-neutral-900/50">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-md animate-pulse overflow-hidden">
+                  {agentDetails && (agentDetails.avatar_url && (agentDetails.avatar_url.startsWith('data:image/') || agentDetails.avatar_url.includes('/') || agentDetails.avatar_url.startsWith('http'))) ? (
+                    <img 
+                      src={agentDetails.avatar_url.startsWith('data:') || agentDetails.avatar_url.startsWith('http') ? agentDetails.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agentDetails.avatar_url}`}
+                      alt={agentDetails.name}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
-                    <Sparkles className="w-5 h-5" />
+                    <span className="text-lg select-none">{agentDetails ? agentDetails.avatar_url || '🤖' : '✨'}</span>
                   )}
                 </div>
                 <div className="flex flex-col w-[75%] items-start">

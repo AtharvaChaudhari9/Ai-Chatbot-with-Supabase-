@@ -466,6 +466,7 @@ export default function Sidebar({
                 onClick={(e) => handleStartRename(e, chat.id, chat.title)}
                 className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
                 title="Rename Chat"
+                data-testid="rename-chat-button"
               >
                 <Edit2 className="w-3 h-3" />
               </button>
@@ -475,6 +476,7 @@ export default function Sidebar({
                 onClick={(e) => handleDelete(e, chat.id)}
                 className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-red-400 cursor-pointer"
                 title="Delete Chat"
+                data-testid="delete-chat-button"
               >
                 {deletingId === chat.id ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -507,7 +509,7 @@ export default function Sidebar({
       )}
 
       {/* Sidebar Drawer container */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-200 transition-transform duration-300 md:static md:translate-x-0 ${
+      <aside data-testid="sidebar" className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-200 transition-transform duration-300 md:static md:translate-x-0 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         
@@ -535,6 +537,7 @@ export default function Sidebar({
             onClick={handleNewChat}
             disabled={isPending}
             className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black px-4 py-3 text-sm font-semibold shadow-sm transition-all duration-200 disabled:opacity-55 cursor-pointer"
+            data-testid="new-chat-button"
           >
             {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin text-black" />
@@ -593,8 +596,16 @@ export default function Sidebar({
                       disabled={isStartingAgent !== null}
                       className="flex flex-1 items-center gap-2 px-2 py-2 overflow-hidden text-left cursor-pointer"
                     >
-                      <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm shrink-0">
-                        {agent.avatar_url && agent.avatar_url.length <= 8 && !agent.avatar_url.includes('/') ? agent.avatar_url : '🤖'}
+                      <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm shrink-0 overflow-hidden">
+                        {agent.avatar_url && (agent.avatar_url.startsWith('data:image/') || agent.avatar_url.includes('/') || agent.avatar_url.startsWith('http')) ? (
+                          <img 
+                            src={agent.avatar_url.startsWith('data:') || agent.avatar_url.startsWith('http') ? agent.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agent.avatar_url}`}
+                            alt={agent.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{agent.avatar_url || '🤖'}</span>
+                        )}
                       </span>
                       <span className="truncate pr-10 font-semibold">{agent.name}</span>
                     </button>
@@ -655,12 +666,13 @@ export default function Sidebar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-xl border border-neutral-900 bg-neutral-900/40 pl-10 pr-4 py-2.5 text-xs text-neutral-200 placeholder-neutral-500 focus:border-neutral-800 focus:outline-none transition-colors"
+              data-testid="search-chat-input"
             />
           </div>
         </div>
 
         {/* Recent Chats list */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin">
+        <div data-testid="chat-list" className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin">
           <div className="px-3 mb-2 text-[10px] font-bold tracking-wider text-neutral-500 uppercase flex items-center gap-1.5">
             <FolderOpen className="w-3.5 h-3.5" />
             Recent Chats
@@ -725,6 +737,7 @@ export default function Sidebar({
           <button
             onClick={handleLogout}
             className="flex w-full items-center justify-between gap-2 rounded-xl bg-neutral-900 hover:bg-neutral-900/60 border border-neutral-800/80 px-3.5 py-2.5 text-xs text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer"
+            data-testid="logout-button"
           >
             <span>Sign Out</span>
             <LogOut className="w-4 h-4" />

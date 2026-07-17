@@ -15,9 +15,12 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
   const isUser = role === 'user';
 
   return (
-    <div className={`flex w-full gap-4 py-5 px-4 md:px-6 transition-all ${
-      isUser ? 'bg-transparent flex-row-reverse' : 'bg-neutral-900/35 border-y border-neutral-900/50'
-    }`}>
+    <div 
+      data-testid={isUser ? 'message-user' : 'message-assistant'}
+      className={`flex w-full gap-4 py-5 px-4 md:px-6 transition-all ${
+        isUser ? 'bg-transparent flex-row-reverse' : 'bg-neutral-900/35 border-y border-neutral-900/50'
+      }`}
+    >
       {/* Avatar */}
       <div className={`flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-xl text-sm font-semibold shadow-md ${
         isUser 

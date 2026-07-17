@@ -202,7 +202,7 @@ export default function ChatLayoutClient({
         <div className="absolute bottom-[-20%] right-[-20%] h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
         {/* Centered MFA Verification Card */}
-        <div className="z-10 w-full max-w-[420px] rounded-3xl border border-neutral-900 bg-neutral-950/60 p-10 shadow-2xl backdrop-blur-xl">
+        <div data-testid="mfa-card" className="z-10 w-full max-w-[420px] rounded-3xl border border-neutral-900 bg-neutral-950/60 p-10 shadow-2xl backdrop-blur-xl">
           <div className="flex flex-col items-center mb-5">
             {/* Visual lock icon */}
             <div className="h-14 w-14 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-3">
@@ -251,6 +251,7 @@ export default function ChatLayoutClient({
                 onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                 className="w-full text-center tracking-[0.75em] text-2xl font-bold rounded-xl border border-neutral-900 bg-neutral-900/40 py-4 text-neutral-200 placeholder-neutral-800 focus:border-neutral-800 focus:outline-none transition-colors"
                 autoFocus
+                data-testid="mfa-input"
               />
             </div>
 
@@ -265,6 +266,7 @@ export default function ChatLayoutClient({
               type="submit"
               disabled={isVerifyingOtp}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-650 hover:bg-indigo-600 text-sm text-white py-4 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+              data-testid="mfa-submit"
             >
               {isVerifyingOtp ? (
                 <>

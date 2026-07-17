@@ -6,7 +6,6 @@ import {
   Plus, Loader2, Sparkles, AlertCircle, CheckCircle, 
   Cpu, Layout, MessageSquare, Compass, Eye, Shield
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 interface AgentModalProps {
   isOpen: boolean;
@@ -26,7 +25,6 @@ interface DocumentMeta {
 const EMOJI_AVATARS = ['🤖', '💻', '⚖️', '👨‍💼', '👩‍⚕️', '🎨', '📈', '🛠️', '🕵️', '🎓'];
 
 export default function AgentModal({ isOpen, onClose, agentId, onSaveSuccess }: AgentModalProps) {
-  const supabase = createClient();
   const [activeTab, setActiveTab] = useState<'info' | 'kb'>('info');
 
   // Agent Form State
@@ -211,34 +209,31 @@ export default function AgentModal({ isOpen, onClose, agentId, onSaveSuccess }: 
   };
 
   // Handle Custom Avatar Image Upload
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setError(null);
+    setSuccess(null);
+    
+    if (file.size > 250 * 1024) {
+      setError('Custom avatar size must be less than 250KB.');
+      return;
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User session not found.');
-
-      // Upload avatar to documents bucket under users folder
-      const timestamp = Date.now();
-      const filename = `avatar_${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const storagePath = `${user.id}/avatars/${filename}`;
-
-      const { data, error: uploadErr } = await supabase.storage
-        .from('documents')
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (uploadErr) throw uploadErr;
-
-      setAvatarUrl(storagePath);
-      setAvatarType('upload');
-      setSuccess('Custom avatar uploaded successfully.');
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setAvatarUrl(event.target.result as string);
+          setAvatarType('upload');
+          setSuccess('Custom avatar loaded successfully.');
+        }
+      };
+      reader.readAsDataURL(file);
     } catch (err: any) {
-      setError('Avatar upload failed: ' + err.message);
+      console.error(err);
+      setError('Failed to load avatar file: ' + err.message);
     }
   };
 
@@ -400,10 +395,11 @@ export default function AgentModal({ isOpen, onClose, agentId, onSaveSuccess }: 
   // Storage Public URL generator (signed or fallback)
   const getAvatarPreviewUrl = (path: string) => {
     if (!path) return '';
-    // Just a placeholder or public url. For real signed urls we'd fetch them,
-    // but in Supabase, we can use the public URL structure if bucket policy permits,
-    // or just download/fetch it. For avatar, let's display an icon or try fetching.
-    return `${supabase.storage.from('documents').getPublicUrl(path).data.publicUrl}`;
+    if (path.startsWith('data:image/') || path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://uelvnyetowoxhuvwxzal.supabase.co';
+    return `${baseUrl}/storage/v1/object/public/documents/${path}`;
   };
 
   if (!isOpen) return null;

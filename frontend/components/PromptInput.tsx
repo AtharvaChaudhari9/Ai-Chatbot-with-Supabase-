@@ -238,6 +238,7 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
           disabled={disabled}
           className="flex-1 max-h-48 resize-none bg-transparent py-2 px-3 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none disabled:opacity-50"
           style={{ minHeight: '38px' }}
+          data-testid="chat-input"
         />
 
         <div className="flex items-center gap-1.5 self-center pr-1">
@@ -254,6 +255,7 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
                 : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white'
                 }`}
               title="Voice Input"
+              data-testid="microphone-button"
             >
               <Mic className="w-5 h-5" />
             </button>
@@ -263,6 +265,7 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
               onClick={handleSend}
               className="p-2 rounded-xl bg-white hover:bg-neutral-200 text-black transition-colors"
               title="Send Prompt"
+              data-testid="send-button"
             >
               <Send className="w-5 h-5" />
             </button>
