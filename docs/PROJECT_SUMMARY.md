@@ -77,18 +77,20 @@ The diagram below maps out how the system evolved from a cloud-coupled monolithi
 5.  **Stage 5: FastAPI Backend Decoupling**: Decoupled the ingestion pipeline to a FastAPI backend. This solved Next.js (Node.js) single-threaded UI freezes caused by heavy document extraction and Surya OCR execution.
 6.  **Stage 6: Qdrant Vector DB Migration**: Migrated embedding vectors from PostgreSQL to Qdrant. This resolved database index bloat and allowed sub-millisecond, graph-based (HNSW) similarity searches with user metadata filtering.
 7.  **Stage 7: Docker Containerization**: Configured multi-container builds with Docker Compose, utilizing Docker's internal DNS network for service discovery and mounting local NVIDIA GPU drivers into the Ollama container for accelerated inference.
-8.  **Stage 8: AWS Cloud Deployment**: Deployed containerized applications to AWS EC2 instance, configuring Nginx as a reverse proxy, SSL certificates via Certbot, and dynamic subdomains via DuckDNS.
-9.  **Stage 9: Automated CI/CD Pipeline**: Configured GitHub Actions workflows to compile Docker images on remote runners, push to GitHub Container Registry (GHCR), and safely pull/reboot on EC2 via SSH.
-10. **Stage 10: In-App MFA & Profile Hydration**: Integrated custom Supabase SQL profile schema, client-side session-locked 2FA validation cards, and server-side layout pre-fetching to eliminate page rendering lags.
-11. **Stage 11: Production Standalone Build Tuning**: Configured Next.js standalone builds and `.dockerignore` context filters to optimize EC2 compilation times.
+8.  **Stage 8: AWS Cloud Deployment**: Deployed containerized applications to AWS EC2 instance, configuring Nginx as a reverse proxy, SSL certificates via Certbot, and dynamic subdomains via DuckDNS. Integrated `ssh-cognexa.bat` and `ssh_config.txt` shell config tools to automate terminal access.
+9.  **Stage 9: Automated CI/CD Pipeline**: Configured GitHub Actions workflows to compile Docker images on remote runners, push to GitHub Container Registry (GHCR), and safely pull/reboot on EC2 via SSH. Added `git-deploy.bat` to automate local Git pushes and trigger pipeline runs instantly.
+10. **Stage 10: Keycloak OIDC & NextAuth Migration**: Replaced third-party SaaS auth (Supabase Auth) with a containerized Keycloak instance running locally. Integrated NextAuth middleware and custom token mappings to link stable deterministic UUIDs.
+11. **Stage 11: In-App User Profile Customization**: Integrated custom Supabase profile schema and server-side pre-fetching (using the admin client) to prevent profile picture flicker during page load.
+12. **Stage 12: In-App Two-Factor Authentication (MFA)**: Built pure-JS RFC-6238 TOTP verification, GoQR code layouts, and custom stacked modals to enforce 2FA session locks natively.
+13. **Stage 13: Production Standalone Build Tuning**: Configured Next.js standalone builds and `.dockerignore` context filters to optimize EC2 compilation times.
 
 ---
 
 ## ⚙️ Core System Functionalities (In Short)
 
 ### 1. Multi-Tenant Authentication & Session Management
-*   **How it works**: Users authenticate via Google OAuth. Session states are stored via Supabase client cookies. 
-*   **Key Tech**: Supabase Auth + Postgres RLS (`auth.uid() = user_id`).
+*   **How it works**: Users authenticate via Google OIDC or local credentials managed by a self-hosted Keycloak instance. Session states are securely held by NextAuth v5 client-side cookies with deterministic user ID mappings to allow smooth history persistence.
+*   **Key Tech**: Keycloak OIDC, NextAuth v5, Postgres RLS (`session.user.id = user_id`).
 
 ### 2. Live Chat Streaming
 *   **How it works**: Next.js streams response tokens as they generate from either cloud or local models to reduce Time to First Token (TTFT).

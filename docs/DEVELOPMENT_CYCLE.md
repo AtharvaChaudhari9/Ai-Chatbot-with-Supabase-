@@ -24,8 +24,10 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
 | **7** | **Containerization** | Docker, Docker Compose, CUDA | "Works on my machine" issues, GPU setup | Full orchestration with isolated bridge network, service discovery, and GPU passthrough. |
 | **8** | **AWS Cloud Deployment** | AWS EC2, Nginx, Certbot (SSL), DuckDNS, Swap | Localhost limits, insecure HTTP, low RAM | Deployed to AWS EC2 using a reverse proxy with tuned buffers, swap file optimization, and cloud LLM fallback. |
 | **9** | **Automated CI/CD** | GitHub Actions, GHCR | Compilation overhead on EC2, manual deploys | Offloaded heavy Docker image compilation to remote runners, deploying pre-built packages to save host resources. |
-| **10** | **In-App MFA & Profile** | Supabase, GoQR API, Custom Modals | UX friction, security vulnerability | Implemented server pre-fetched custom profiles and dynamic in-app 2FA lock screens with RFC 6238 TOTP verification. |
-| **11** | **Build System Perf** | Docker Standalone, .dockerignore | Webpack build overhead, slow EC2 deploys | Bypassed compiler checks on build context copy and enabled Next.js standalone outputs to drop copy times to 0s. |
+| **10** | **Keycloak OIDC Migration** | Keycloak, NextAuth, OpenID Connect | Auth broker vendor lock-in, credential federations | Replaced third-party SaaS auth with local Keycloak OIDC container + NextAuth middleware integration. |
+| **11** | **In-App User Profile** | Supabase Profiles, Admin Hydration | Avatar sync delays, name change limits | Configured Profiles mapping and server pre-fetching to prevent UI load flicker. |
+| **12** | **In-App MFA/2FA Setup** | GoQR API, sessionStorage, totp.ts | Authentication security compliance | Built a pure-JS RFC-6238 TOTP verification engine with custom stacked layout modals. |
+| **13** | **Build System Perf** | Docker Standalone, .dockerignore | Webpack build overhead, slow EC2 deploys | Bypassed compiler checks on build context copy and enabled Next.js standalone outputs to drop copy times to 0s. |
 
 ---
 
@@ -83,13 +85,35 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
     1.  **Security**: Kept database and backend API ports (6333, 8000, 11434) isolated inside the private Docker bridge network, exposing only Nginx on Port 80/443.
     2.  **Resource Constraints (1GB RAM)**: Configured 4GB of swap memory to prevent the small EC2 instance from crashing during webpack compile and pip dependencies installation.
     3.  **Cloud LLM Fallback**: Configured Google Gemini API as the primary chatbot interface in production, offloading LLM inference from the EC2's 1 vCPU, which prevents system lockups.
+    4.  **SSH Terminal Shortcuts**: Created `scripts/ssh-cognexa.bat` and `scripts/ssh_config.txt` to map the server PEM key and IP credentials, letting developers log into the EC2 console via a single click rather than typing long SSH arguments.
 
 ### Stage 9: Automated CI/CD Pipeline (GitHub Actions & GHCR)
 *   **Architecture**: Implemented remote continuous integration and deployment. Upon code push, **GitHub Actions** runs linting/checks, builds Docker images on remote runners, and publishes them to **GitHub Container Registry (GHCR)**. The workflow then SSHs into the EC2 instance to pull pre-compiled images and run them using Docker Compose.
 *   **Engineering Rationale**:
     1.  **Free Tier Memory Conservation**: Running live `docker-compose build` commands on a `t2.micro` (1GB RAM) instance locks up the CPU, runs heavy disk swap, and crashes running application services. Offloading compilation to GitHub's free runners saves host RAM/CPU.
     2.  **Rapid, Low-Overhead Deployments**: Pulling pre-compiled layers from GHCR takes seconds and avoids long compilation delays, providing near-zero downtime deployment.
-    3.  **Enterprise Best Practices**: If a paid high-compute EC2 instance (e.g. `t3.medium` or larger with 4GB+ RAM) were used, we could have chosen a GitOps pull-based agent (such as **Watchtower** or **ArgoCD**) or self-hosted runners. However, remote building to a registry is always preferred over compiling locally on production instances to ensure clean isolation, reproducibility, and minimal security footprint.
+    3.  **Git Deployment Automation Script**: Created `scripts/git-deploy.bat` to automate the local Windows staging, committing, and pushing workflow. It prompts the user for custom commit messages (defaulting to "Auto-update") and pushes changes directly, triggering the CI/CD pipeline.
+
+### Stage 10: Migration to Keycloak OIDC & NextAuth
+*   **Architecture**: Replaced the cloud-coupled Supabase Auth engine with a self-hosted **Keycloak OIDC Identity Provider** container running locally inside our Compose network. Next.js uses the **NextAuth v5 (Auth.js)** client middleware helper to authenticate OIDC session signatures.
+*   **Engineering Rationale**:
+    1.  **Central User Management**: Keycloak maps Google logins, user database storage, and custom actions (like password updates) centrally, eliminating proprietary SaaS lock-ins.
+    2.  **Deterministic Mapping**: Implemented a secure NextAuth callback adapter mapping shifting OIDC provider attributes into stable, deterministic UUID keys, keeping chat log entries linked correctly.
+
+### Stage 11: In-App User Profile Customization & Server Hydration
+*   **Architecture**: Added custom user database profile mappings in Supabase. The Next.js frontend uses a layout helper to pre-fetch nicknames and base64-encoded custom avatar images server-side using the admin client, bypassing RLS gates.
+*   **Engineering Rationale**:
+    1.  **Flicker-Free UX**: Bypasses the asynchronous client session delay, ensuring profile elements are fully loaded and rendered on the initial page load.
+
+### Stage 12: In-App Two-Factor Authentication (MFA/2FA)
+*   **Architecture**: Integrates an in-app setup QR, a custom-built pure JavaScript TOTP verification module, and sessionStorage-locked page filters.
+*   **Engineering Rationale**:
+    1.  **Security Compliance**: Standardizes in-app MFA setups without forcing users to navigate to intermediate Keycloak admin pages.
+
+### Stage 13: Next.js Standalone Build & EC2 Performance Tuning
+*   **Architecture**: Next.js standalone container packaging, build ignore options, and reverse proxy trust parameters.
+*   **Engineering Rationale**:
+    1.  **Speed**: Drops container build and copy delays down to under 1 second on low-spec AWS cloud runners.
 
 ---
 

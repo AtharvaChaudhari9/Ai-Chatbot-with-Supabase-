@@ -16,9 +16,9 @@ This document details every feature and core functionality implemented in the **
 8. [Custom Specialized Agents](#8-custom-specialized-agents)
 9. [Secure Production Deployment (AWS EC2 & Nginx)](#9-secure-production-deployment-aws-ec2--nginx)
 10. [Automated CI/CD Pipeline (GitHub Actions & GHCR)](#10-automated-cicd-pipeline-github-actions--ghcr)
-11. [In-App User Profile Customization](#11-in-app-user-profile-customization)
-12. [In-App Two-Factor Authentication (MFA/2FA)](#12-in-app-two-factor-authentication-mfa2fa)
-13. [OIDC Identity Mapping & Keycloak Theme Overrides](#13-oidc-identity-mapping--keycloak-theme-overrides)
+11. [Keycloak OIDC Integration & Custom Themes](#11-keycloak-oidc-integration--custom-themes)
+12. [In-App User Profile Customization](#12-in-app-user-profile-customization)
+13. [In-App Two-Factor Authentication (MFA/2FA)](#13-in-app-two-factor-authentication-mfa2fa)
 14. [Next.js Standalone Build & EC2 Performance Tuning](#14-nextjs-standalone-build--ec2-performance-tuning)
 
 ---
@@ -212,6 +212,7 @@ Exposes the dockerized chatbot stack securely on a public-facing AWS EC2 instanc
     ```
 *   **SSL/TLS Certificate**: Let's Encrypt certificates managed by Certbot, mapped to a free dynamic subdomain from DuckDNS (`cognexa-ai.duckdns.org`).
 *   **Resource Tuning**: Added a 4GB Swap file to prevent the 1GB RAM EC2 server from experiencing Out of Memory (OOM) failures during compiler steps.
+*   **SSH Console Access Shortcuts**: Created [ssh-cognexa.bat](file:///c:/Users/cdrja/Desktop/chatbot-supabase/scripts/ssh-cognexa.bat) in the `scripts/` directory. It maps the server PEM key and IP configurations via [ssh_config.txt](file:///c:/Users/cdrja/Desktop/chatbot-supabase/scripts/ssh_config.txt), enabling developers to double-click the script to establish terminal sessions instantly.
 
 ### 🔄 What Changed & Why?
 *   **Initial State**: Localhost-only deployment (`http://localhost:3000`) with raw container ports exposed directly on local interfaces.
@@ -230,6 +231,7 @@ Automates code testing, container compilation, and cloud deployment. Every push 
 *   **Compilation Environment**: Remote Ubuntu runners executing Docker Buildx with cache optimization enabled (`type=gha`).
 *   **Artifact Registry**: GitHub Container Registry (`ghcr.io`) hosting private package images.
 *   **Deployment Hook**: SSH connection executed via `appleboy/ssh-action` connecting to EC2 on Port 22 using a repository SSH key, pulling latest changes, logging into GHCR, pulling the pre-built packages, restarting containers, and pruning stale layers.
+*   **Git Deployment Automation Script**: Created [git-deploy.bat](file:///c:/Users/cdrja/Desktop/chatbot-supabase/scripts/git-deploy.bat) in the `scripts/` folder. It prompts the user for a commit message (defaulting to "Auto-update"), runs `git add .`, commits the changes, and pushes to `main` automatically, triggering the automated GitHub Actions pipeline.
 
 ### 🔄 What Changed & Why?
 *   **Initial State**: Manual deployment: developers SSH'ed into EC2, ran `git pull`, and executed `docker-compose up --build`.
@@ -241,9 +243,25 @@ Automates code testing, container compilation, and cloud deployment. Every push 
 
 ---
 
+## 11. Keycloak OIDC Integration & Custom Themes
+
+### 📝 Description
+Replaced the external third-party SaaS authentication (Supabase Auth) with a self-hosted, local **Keycloak OIDC Identity Provider** container. Keycloak handles OAuth credentials and user data securely. Customized templates ensure Keycloak forms match the Cognexa brand theme.
+
+### ⚙️ Technical Implementation
+*   **NextAuth Middleware Integration**: Added `auth.ts` middleware hooks inside the Next.js app to intercept protected routes. NextAuth decrypts the Keycloak token sub claims.
+*   **OIDC Token Claims Mapping**: Configured custom Keycloak user attribute mappers to sync Google IDP user profile pictures (`picture`) into Keycloak sessions automatically.
+*   **Required Actions Password Changes**: Built [change-password/route.ts](file:///c:/Users/chatbot-supabase/frontend/app/api/user/change-password/route.ts) to let users change passwords in-app. Uses Master Admin CLI tokens to programmatically register `UPDATE_PASSWORD` on the user, logging them out to force resets.
+*   **FreeMarker Templates**: Created [login-update-password.ftl](file:///c:/Users/chatbot-supabase/keycloak/themes/cognexa/login/login-update-password.ftl) and [login-config-totp.ftl](file:///c:/Users/chatbot-supabase/keycloak/themes/cognexa/login/login-config-totp.ftl) styled with custom Tailwind themes.
+
+### 🔄 What Changed & Why?
+*   **Initial State:** Relied on SaaS Supabase Auth, which introduces third-party lock-ins and vendor fees, and generic Keycloak required action pages.
+*   **Current State:** Completely containerized, local user credential federation using Keycloak OIDC. Password reset page forms match the app's dark theme.
+*   **Rationale (Why):** Self-hosting the auth layer keeps user data private and offline-capable. Using a centralized required actions loop ensures password updates are executed securely by the core identity broker.
+
 ---
 
-## 11. In-App User Profile Customization
+## 12. In-App User Profile Customization
 
 ### 📝 Description
 Enables users to customize their profile settings (nickname, custom base64-encoded avatar uploads) directly inside the chatbot settings gear panel. To prevent rendering flicker on startup, layout props are hydrated server-side.
@@ -261,7 +279,7 @@ Enables users to customize their profile settings (nickname, custom base64-encod
 
 ---
 
-## 12. In-App Two-Factor Authentication (MFA/2FA)
+## 13. In-App Two-Factor Authentication (MFA/2FA)
 
 ### 📝 Description
 Allows users to secure their accounts using standard Time-based One-Time Passwords (TOTP). The setup, QR scanning, code verification, and session unlocking occur natively inside the chatbot.
@@ -276,23 +294,6 @@ Allows users to secure their accounts using standard Time-based One-Time Passwor
 *   **Initial State:** No secondary security checks; password validation was the sole security barrier.
 *   **Current State:** 6-digit TOTP verification is required on login. The setup/removal flows use elegant overlays.
 *   **Rationale (Why):** Standard MFA compliance. Storing the secret in `profiles` and verifying it in-app keeps the login experience unified. Checking `sessionStorage` and clearing verification tokens on user logout or login mount ensures active, secure session closures.
-
----
-
-## 13. OIDC Identity Mapping & Keycloak Theme Overrides
-
-### 📝 Description
-Customizes Keycloak's login identity provider callbacks and required actions. If a user authenticates via Google OIDC, their Google avatar is synced. If they click "Change Password" in-app, they are redirected to a customized, styled FreeMarker theme page in Keycloak.
-
-### ⚙️ Technical Implementation
-*   **Google IDP Sync**: Configured mappers in Keycloak to import Google's `picture` URL claim into the user's `picture` attribute under `FORCE` sync mode, and mapped this user attribute to the client ID tokens.
-*   **Required Action Endpoint**: [change-password/route.ts](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/app/api/user/change-password/route.ts) utilizes Keycloak Admin API credentials to attach the `UPDATE_PASSWORD` action to the user record, logging them out to force the reset flow.
-*   **FreeMarker Templates**: Created [login-update-password.ftl](file:///c:/Users/cdrja/Desktop/chatbot-supabase/keycloak/themes/cognexa/login/login-update-password.ftl) and [login-config-totp.ftl](file:///c:/Users/cdrja/Desktop/chatbot-supabase/keycloak/themes/cognexa/login/login-config-totp.ftl) styled with Tailwind to replace Keycloak's default screens.
-
-### 🔄 What Changed & Why?
-*   **Initial State:** Password resets were handled by generic, un-styled Keycloak browser pages, and user avatars defaulted to initials because Google claims were not mapped to NextAuth.
-*   **Current State:** Styled update password screens matching the Cognexa theme. Google avatars are imported automatically.
-*   **Rationale (Why):** Professional appearance. Consistently styled pages prevent users from thinking they have been redirected to an untrusted third-party site when updating critical credentials.
 
 ---
 

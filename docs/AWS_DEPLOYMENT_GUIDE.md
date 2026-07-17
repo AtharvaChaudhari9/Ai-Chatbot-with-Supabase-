@@ -183,18 +183,23 @@ docker-compose exec ollama ollama pull nomic-embed-text
 
 ## Part 6: How to Pull Future Code Updates
 
-When you make changes locally on your development machine and push them to GitHub:
-```bash
-# 1. SSH into the EC2 instance and go to the project folder
-cd ~/Ai-Chatbot-with-Supabase-
+### Method A: Automated Deployment (Recommended)
+We have created automation scripts inside the `scripts/` directory to make local development and cloud synchronization effortless:
+1. **Trigger Automated Push & CI/CD**:
+   Double-click or run [git-deploy.bat](file:///c:/Users/cdrja/Desktop/chatbot-supabase/scripts/git-deploy.bat) inside your local `scripts/` folder. It stages all workspace files, prompts for a commit message (defaults to "Auto-update"), and pushes them to GitHub. The CI/CD pipeline then builds and restarts the containers on your EC2 instance automatically.
+2. **Instant EC2 Console Connection**:
+   Double-click or run [ssh-cognexa.bat](file:///c:/Users/cdrja/Desktop/chatbot-supabase/scripts/ssh-cognexa.bat) in the `scripts/` folder. It reads the local connection configurations defined in [ssh_config.txt](file:///c:/Users/cdrja/Desktop/chatbot-supabase/scripts/ssh_config.txt), launching your EC2 SSH console instantly without typing complex IP address paths or PEM flags.
 
-# 2. Reset any local changes on the server and pull new code
-git reset --hard origin/main
-git pull origin main
-
-# 3. Rebuild and restart the containers
-docker-compose up -d --build
-```
+### Method B: Manual Fallback Updates
+If you need to trigger a container update directly from the server:
+1. Double-click `ssh-cognexa.bat` to connect to the EC2 terminal.
+2. Go to the project folder, pull the main branch, and rebuild:
+   ```bash
+   cd ~/Ai-Chatbot-with-Supabase-
+   git reset --hard origin/main
+   git pull origin main
+   docker-compose up -d --build
+   ```
 
 ---
 
