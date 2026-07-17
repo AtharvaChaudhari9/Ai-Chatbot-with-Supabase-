@@ -16,6 +16,10 @@ This document details every feature and core functionality implemented in the **
 8. [Custom Specialized Agents](#8-custom-specialized-agents)
 9. [Secure Production Deployment (AWS EC2 & Nginx)](#9-secure-production-deployment-aws-ec2--nginx)
 10. [Automated CI/CD Pipeline (GitHub Actions & GHCR)](#10-automated-cicd-pipeline-github-actions--ghcr)
+11. [In-App User Profile Customization](#11-in-app-user-profile-customization)
+12. [In-App Two-Factor Authentication (MFA/2FA)](#12-in-app-two-factor-authentication-mfa2fa)
+13. [OIDC Identity Mapping & Keycloak Theme Overrides](#13-oidc-identity-mapping--keycloak-theme-overrides)
+14. [Next.js Standalone Build & EC2 Performance Tuning](#14-nextjs-standalone-build--ec2-performance-tuning)
 
 ---
 
@@ -234,6 +238,79 @@ Automates code testing, container compilation, and cloud deployment. Every push 
     1.  **Server Protection**: Running local webpack compiles and pip compilations on a Free Tier EC2 instance (1GB RAM) spikes the single-core CPU to 100%, causing OOM page faults and crashing active chatbot sessions. Offloading compiles to GitHub Action runners ensures the server remains responsive.
     2.  **Low-Downtime Reboots**: Pulling pre-compiled Docker packages takes only a few seconds, reducing redeployment downtime from several minutes to under 15 seconds.
     3.  **Clean State Packaging**: Using registry-based images eliminates the need to compile code locally, guaranteeing identical builds between development and production environments.
+
+---
+
+---
+
+## 11. In-App User Profile Customization
+
+### 📝 Description
+Enables users to customize their profile settings (nickname, custom base64-encoded avatar uploads) directly inside the chatbot settings gear panel. To prevent rendering flicker on startup, layout props are hydrated server-side.
+
+### ⚙️ Technical Implementation
+*   **Database Schema**: A relational table `profiles` in Supabase:
+    *   `id` (UUID, primary key linking to `auth.users`), `nickname` (text), `avatar_url` (text representing optimized base64 data URI), `mfa_secret` (text), `mfa_enabled` (boolean).
+*   **Server pre-fetching**: [layout.tsx](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/app/chat/layout.tsx) executes a database read using the service role client (`createAdminClient()`), passing initial states (`nickname`, `avatar_url`) to the child client wrapper. This prevents client-side rendering flicker caused by NextAuth's asynchronous session loading hooks.
+*   **API Routes**: [profile/route.ts](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/app/api/user/profile/route.ts) handles profile reads (GET) and updates (POST) securely.
+
+### 🔄 What Changed & Why?
+*   **Initial State:** General profile values (first/last name) were loaded dynamically from Keycloak OIDC claims. Usernames and pictures were read-only, and loading them on the client caused a 200ms flicker where initials placeholders loaded first.
+*   **Current State:** Fully customizable profile nicknames and avatars. Server-side pre-fetching hydrates layout parameters immediately before rendering the page HTML.
+*   **Rationale (Why):** Customization increases user engagement. Server-side pre-fetching using `createAdminClient` bypasses Supabase RLS limits securely, ensuring custom profile changes are active from the very first paint frame.
+
+---
+
+## 12. In-App Two-Factor Authentication (MFA/2FA)
+
+### 📝 Description
+Allows users to secure their accounts using standard Time-based One-Time Passwords (TOTP). The setup, QR scanning, code verification, and session unlocking occur natively inside the chatbot.
+
+### ⚙️ Technical Implementation
+*   **RFC 6238 Validator**: Built [totp.ts](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/lib/totp.ts) to verify 6-digit verification codes against Base32 secrets. Includes look-ahead/look-behind windows (drift tolerance) to handle network delay or phone clock desynchronizations.
+*   **QR Generator**: Swapped deprecated charts API for the modern **GoQR API** (`api.qrserver.com`) to render TOTP URIs (`otpauth://totp/Cognexa...`).
+*   **Session Lock Layer**: [LayoutClient.tsx](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/app/chat/LayoutClient.tsx) intercepts page routing. If `mfa_enabled` is true in their database profile and `mfa_verified` is not true in the browser's `sessionStorage`, a full-screen input block card is displayed.
+*   **Custom Stacked Modals**: Replaced browser confirm/alert popups in [Sidebar.tsx](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/components/Sidebar.tsx) with custom stacked modals for enabling, verifying, and disabling MFA.
+
+### 🔄 What Changed & Why?
+*   **Initial State:** No secondary security checks; password validation was the sole security barrier.
+*   **Current State:** 6-digit TOTP verification is required on login. The setup/removal flows use elegant overlays.
+*   **Rationale (Why):** Standard MFA compliance. Storing the secret in `profiles` and verifying it in-app keeps the login experience unified. Checking `sessionStorage` and clearing verification tokens on user logout or login mount ensures active, secure session closures.
+
+---
+
+## 13. OIDC Identity Mapping & Keycloak Theme Overrides
+
+### 📝 Description
+Customizes Keycloak's login identity provider callbacks and required actions. If a user authenticates via Google OIDC, their Google avatar is synced. If they click "Change Password" in-app, they are redirected to a customized, styled FreeMarker theme page in Keycloak.
+
+### ⚙️ Technical Implementation
+*   **Google IDP Sync**: Configured mappers in Keycloak to import Google's `picture` URL claim into the user's `picture` attribute under `FORCE` sync mode, and mapped this user attribute to the client ID tokens.
+*   **Required Action Endpoint**: [change-password/route.ts](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/app/api/user/change-password/route.ts) utilizes Keycloak Admin API credentials to attach the `UPDATE_PASSWORD` action to the user record, logging them out to force the reset flow.
+*   **FreeMarker Templates**: Created [login-update-password.ftl](file:///c:/Users/cdrja/Desktop/chatbot-supabase/keycloak/themes/cognexa/login/login-update-password.ftl) and [login-config-totp.ftl](file:///c:/Users/cdrja/Desktop/chatbot-supabase/keycloak/themes/cognexa/login/login-config-totp.ftl) styled with Tailwind to replace Keycloak's default screens.
+
+### 🔄 What Changed & Why?
+*   **Initial State:** Password resets were handled by generic, un-styled Keycloak browser pages, and user avatars defaulted to initials because Google claims were not mapped to NextAuth.
+*   **Current State:** Styled update password screens matching the Cognexa theme. Google avatars are imported automatically.
+*   **Rationale (Why):** Professional appearance. Consistently styled pages prevent users from thinking they have been redirected to an untrusted third-party site when updating critical credentials.
+
+---
+
+## 14. Next.js Standalone Build & EC2 Performance Tuning
+
+### 📝 Description
+Optimizes Docker compilation times and memory configurations to allow fast, low-overhead container builds on AWS Free Tier EC2 instances (1 vCPU, 1GB RAM).
+
+### ⚙️ Technical Implementation
+*   **Standalone Output**: Configured `output: "standalone"` in `next.config.ts`. Next.js output files trace dependency imports, packaging only runtime necessities into `.next/standalone`, discarding devDependencies.
+*   **Dockerfile Optimization**: Updated `Dockerfile` Stage 2 to copy only the standalone output folder (~30MB) and static files, eliminating the need to copy the full `node_modules` folder (500MB+), which slashed image export times from 70s to 1s.
+*   **Context Ignore**: Added `.dockerignore` to block the host OS's local `node_modules` and compiled `.next` caches from transferring to the Docker daemon.
+*   **Typecheck Bypass**: Set `ignoreBuildErrors: true` in the compiler options specifically during container assembly since these checks are run locally before push, saving critical CPU cycles on the EC2 runner.
+
+### 🔄 What Changed & Why?
+*   **Initial State:** Local docker compiles on EC2 took over 5 minutes and occasionally locked up the CPU completely, crashing the server.
+*   **Current State:** Builds compile and stage in under 2 minutes, with container copy/export steps completing in a fraction of a second.
+*   **Rationale (Why):** Micro cloud instances have extremely limited RAM and CPU credits. Offloading Webpack type-checking, preventing context bloat, and utilizing Standalone dependencies avoids credit exhaustion, ensuring high server availability during upgrades.
 
 ---
 

@@ -79,6 +79,8 @@ The diagram below maps out how the system evolved from a cloud-coupled monolithi
 7.  **Stage 7: Docker Containerization**: Configured multi-container builds with Docker Compose, utilizing Docker's internal DNS network for service discovery and mounting local NVIDIA GPU drivers into the Ollama container for accelerated inference.
 8.  **Stage 8: AWS Cloud Deployment**: Deployed containerized applications to AWS EC2 instance, configuring Nginx as a reverse proxy, SSL certificates via Certbot, and dynamic subdomains via DuckDNS.
 9.  **Stage 9: Automated CI/CD Pipeline**: Configured GitHub Actions workflows to compile Docker images on remote runners, push to GitHub Container Registry (GHCR), and safely pull/reboot on EC2 via SSH.
+10. **Stage 10: In-App MFA & Profile Hydration**: Integrated custom Supabase SQL profile schema, client-side session-locked 2FA validation cards, and server-side layout pre-fetching to eliminate page rendering lags.
+11. **Stage 11: Production Standalone Build Tuning**: Configured Next.js standalone builds and `.dockerignore` context filters to optimize EC2 compilation times.
 
 ---
 
@@ -107,6 +109,18 @@ The diagram below maps out how the system evolved from a cloud-coupled monolithi
 ### 6. Automated CI/CD Pipeline
 *   **How it works**: Automatically builds frontend and backend Docker containers in GitHub Actions runners on push to main, pushes to GitHub Container Registry (GHCR), and pulls/restarts them on EC2 over SSH.
 *   **Key Tech**: GitHub Actions, GHCR, SSH-deploy, Docker Compose.
+
+### 7. User Profile Settings & Server Hydration
+*   **How it works**: Allows users to customize display nicknames and upload profile pictures. Hydrates layout properties on the server side using the service role client (`createAdminClient()`) to bypass relational RLS checks, eliminating initials placeholder rendering lag.
+*   **Key Tech**: Supabase Profiles database schema, Next.js Server Components, Base64 uploads.
+
+### 8. In-App Two-Factor Authentication (MFA)
+*   **How it works**: Secures user accounts via standard TOTP. Generates secret keys in-app, displays dynamic GoQR setup links, verifies codes via purely client-side RFC 6238 look-ahead windows, and enforces full-screen session-locked input cards using `sessionStorage` (cleared on logout).
+*   **Key Tech**: Node `crypto` algorithms, sessionStorage, stackable modal overlays.
+
+### 9. Standalone Container Performance Tuning
+*   **How it works**: Bypasses compiler type-checks during Docker container assembly. Employs Next.js Standalone builds to trace runtime files and compile compact packages (~30MB instead of 500MB+ node_modules), cutting EC2 context transfer and export times down to 1s.
+*   **Key Tech**: Next.js Standalone Output, `.dockerignore` filters.
 
 ---
 

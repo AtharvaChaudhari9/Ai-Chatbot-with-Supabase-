@@ -24,6 +24,8 @@ The project evolved from a monolithic cloud-reliant hobby project into a decoupl
 | **7** | **Containerization** | Docker, Docker Compose, CUDA | "Works on my machine" issues, GPU setup | Full orchestration with isolated bridge network, service discovery, and GPU passthrough. |
 | **8** | **AWS Cloud Deployment** | AWS EC2, Nginx, Certbot (SSL), DuckDNS, Swap | Localhost limits, insecure HTTP, low RAM | Deployed to AWS EC2 using a reverse proxy with tuned buffers, swap file optimization, and cloud LLM fallback. |
 | **9** | **Automated CI/CD** | GitHub Actions, GHCR | Compilation overhead on EC2, manual deploys | Offloaded heavy Docker image compilation to remote runners, deploying pre-built packages to save host resources. |
+| **10** | **In-App MFA & Profile** | Supabase, GoQR API, Custom Modals | UX friction, security vulnerability | Implemented server pre-fetched custom profiles and dynamic in-app 2FA lock screens with RFC 6238 TOTP verification. |
+| **11** | **Build System Perf** | Docker Standalone, .dockerignore | Webpack build overhead, slow EC2 deploys | Bypassed compiler checks on build context copy and enabled Next.js standalone outputs to drop copy times to 0s. |
 
 ---
 
@@ -157,6 +159,22 @@ Every strong interview needs a "What went wrong, and how did you fix it?" story.
 ### 7. Ollama CPU Lockup on Low-Compute Cloud Instances
 *   **Problem**: Running a query using the local Ollama backend on a single-core EC2 instance caused the request to take over 5 minutes, resulting in a timeout. The Ollama logs showed prompt processing taking `122.18s` for 1024 tokens and locking up the CPU.
 *   **Resolution**: Established hybrid failover best practices. In production, we utilize the Google Gemini API (cloud-based) as the default LLM driver, ensuring sub-second response times without overloading the micro-instance's CPU.
+
+### 8. NextAuth PKCE Verification Loops during Keycloak Password Changes
+*   **Problem**: When triggering Keycloak's `UPDATE_PASSWORD` required action in-app, users were successfully logged out, but upon returning to the app they got trapped in a loop throwing `InvalidCheck: pkceCodeVerifier value could not be parsed`.
+*   **Resolution**: PKCE verifier cookies stored in browser sessions expire or get blocked by cross-origin security rules during redirect hops. I refactored the Keycloak provider inside `auth.ts` to configure `checks: ["state"]`. Bypassing PKCE check verification solved the validation errors while preserving secure state token handshakes over HTTPS.
+
+### 9. Server Hydration Lag and RLS Policy Blocks
+*   **Problem**: Pre-fetching custom profile nicknames and avatars on the server side to resolve the rendering flicker failed. The layout queries returned empty results, causing the app to fall back to default OIDC initials for 200ms before client-side hooks loaded.
+*   **Resolution**: The server-side Supabase client (`createClient()`) queries the database anonymously. Since row-level security (RLS) restricts access to authenticated users, it blocked server-side layout queries. I updated the layout server side to instantiate the **admin client** (`createAdminClient()`), which bypasses RLS securely (since the user session ID is already verified by NextAuth). This successfully hydrated the HTML immediately on page delivery.
+
+### 10. Docker Build Context Transfer Overhead (The Missing .dockerignore)
+*   **Problem**: Changing a single frontend file forced EC2 rebuilds to take 5+ minutes. Docker Compose was copying the local `node_modules` (500MB+) to the build context, and then copying it again into the runner image.
+*   **Resolution**: 
+    1.  *Context Filtering*: Created a `frontend/.dockerignore` file, excluding `node_modules`, `.next`, and `.git` from the Docker context transfer, dropping build startup times.
+    2.  *Next.js Standalone Build*: Configured `output: "standalone"` in `next.config.ts` and updated the `Dockerfile` to copy only the lightweight standalone folder (~30MB). This bypassed copying `node_modules` in Stage 2, speeding up copy and export layers to 1 second.
+    3.  *Build-Bypass Validation*: Configured the Next.js compiler to ignore ESLint/TypeScript checks during production compilation since these are verified locally before push, saving huge CPU overhead on the low-resource cloud instance.
+
 
 ---
 

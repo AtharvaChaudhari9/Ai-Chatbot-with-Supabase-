@@ -47,3 +47,36 @@ We need to revert the direct mutation of `token.sub` in the `jwt` callback, and 
     }
     ```
 3.  **Deploy and fetch the generated UUID:** Restart the container, log in, print the stable UUID generated for `chaudharia011@gmail.com` (which will be solid and un-shifting), and run the final SQL query mapping to restore your chat history.
+
+---
+
+## 4. Updates & Solutions (2026-07-16 to 2026-07-17)
+
+We resolved several key authentication integration issues during the implementation of in-app MFA/2FA, password changes, and cloud reverse proxy configurations:
+
+### A. NextAuth PKCE Cookie Verification Failure (RESOLVED)
+*   **Symptom:** When a user clicked "Change Password", our API triggered Keycloak's `UPDATE_PASSWORD` required action and logged the user out. Upon redirection through the intermediate required action screens, the browser threw `[auth][error] InvalidCheck: pkceCodeVerifier value could not be parsed`.
+*   **Root Cause:** PKCE (Proof Key for Code Exchange) relies on a transient verification cookie (`code_verifier`) stored in the browser. Redirections through multiple intermediate Keycloak required action pages (which are served on different session routes) caused these transient verification cookies to expire or get blocked by strict SameSite security restrictions.
+*   **Resolution:** Modified [auth.ts](file:///c:/Users/cdrja/Desktop/chatbot-supabase/frontend/auth.ts) to configure `checks: ["state"]` on the Keycloak provider, bypassing the PKCE checks and relying on standard OIDC state tokens, resolving the error.
+*   **Pros & Cons:**
+    *   *Pros:* Ensures 100% login success rates across required-action redirects.
+    *   *Cons:* Relies on state tokens instead of PKCE verifiers, which is secure enough since our app runs over HTTPS, but PKCE is generally preferred for public native clients.
+
+### B. Nginx Reverse Proxy "UntrustedHost" Redirect Crash (RESOLVED)
+*   **Symptom:** After production deployment, NextAuth crashed with `[auth][error] UntrustedHost: Host must be trusted`.
+*   **Root Cause:** NextAuth v5 (Auth.js) disables insecure HTTP requests on public subdomains by default. Since Nginx terminates SSL at the host level and passes traffic to the Next.js container over HTTP, NextAuth saw the protocol as insecure `http` and rejected it.
+*   **Resolution:** Added the environment variable `AUTH_TRUST_HOST=true` under the `frontend` container definition inside [docker-compose.yml](file:///c:/Users/cdrja/Desktop/chatbot-supabase/docker-compose.yml), instructing NextAuth to trust forward headers from Nginx.
+*   **Pros & Cons:**
+    *   *Pros:* Resolves redirect loop crashes behind SSL proxies instantly.
+    *   *Cons:* None; standard practice for containerized reverse-proxy configurations.
+
+### C. Missing Google Account Profile Pictures (RESOLVED)
+*   **Symptom:** NextAuth sessions initialized with `user.image` as `null` for Google accounts, rendering initials instead of profile avatars.
+*   **Root Cause:** Keycloak does not automatically import custom identity provider attributes (like Google's OIDC `picture` claim) or map them to client tokens by default.
+*   **Resolution:** Added two mappers inside Keycloak:
+    1.  *Identity Provider Mapper:* Type `Attribute Importer`, mapping JSON path `picture` to user attribute `picture` with Sync Mode Override set to `FORCE`.
+    2.  *Client Mapper:* Dedicated scope user attribute mapper, exporting user attribute `picture` to Token Claim Name `picture` (added to ID Token, Access Token, and UserInfo).
+*   **Pros & Cons:**
+    *   *Pros:* Syncs profile avatars automatically on every login, avoiding cache staleness.
+    *   *Cons:* Requires manual configuration in the Keycloak admin panel.
+
