@@ -1,18 +1,20 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Cpu, Settings, Check, X, RotateCw } from 'lucide-react';
+import { Sparkles, Cpu, Settings, Check, X, RotateCw, ChevronDown } from 'lucide-react';
 import { useModel } from '@/app/chat/LayoutClient';
 
 export default function ModelSelector() {
   const { model, setModel, localUrl, setLocalUrl, localModel, setLocalModel } = useModel();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [tempUrl, setTempUrl] = useState(localUrl);
   const [tempModel, setTempModel] = useState(localModel);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   // Sync inputs with global state
   useEffect(() => {
@@ -63,14 +65,17 @@ export default function ModelSelector() {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
     }
-    if (isOpen) {
+    if (isOpen || isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, isMobileMenuOpen]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,31 +90,111 @@ export default function ModelSelector() {
   };
 
   return (
-    <div className="relative flex items-center gap-2">
-      {/* Sliding Capsule Selector */}
-      <div className="flex p-0.5 rounded-full bg-neutral-900 border border-neutral-800 shadow-inner">
+    <div className="relative flex items-center gap-1.5">
+      {/* Mobile Compact Single Button with Dropdown Arrow (<sm) */}
+      <div className="sm:hidden relative" ref={mobileMenuRef}>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="flex items-center gap-1 px-2 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] font-semibold text-neutral-200 shadow-sm cursor-pointer hover:bg-neutral-850 transition-all"
+        >
+          {model === 'gemini' ? (
+            <>
+              <Sparkles className="w-3 h-3 text-indigo-400 shrink-0" />
+              <span>Gemini</span>
+            </>
+          ) : (
+            <>
+              <Cpu className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span className="truncate max-w-[65px]">{localModel || 'Local'}</span>
+            </>
+          )}
+          <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Mobile Dropdown Menu */}
+        {isMobileMenuOpen && (
+          <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-neutral-850 bg-neutral-950 p-2 shadow-2xl z-50 animate-in fade-in duration-200">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-1 select-none">
+              Select Provider
+            </div>
+            <button
+              onClick={() => {
+                setModel('gemini');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                model === 'gemini'
+                  ? 'bg-neutral-850 text-white font-semibold'
+                  : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                Gemini API
+              </span>
+              {model === 'gemini' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+            </button>
+
+            <button
+              onClick={() => {
+                setModel('local');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                model === 'local'
+                  ? 'bg-neutral-850 text-white font-semibold'
+                  : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+                Local LLM
+              </span>
+              {model === 'local' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+            </button>
+
+            {model === 'local' && (
+              <div className="border-t border-neutral-900 mt-1.5 pt-1.5">
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] text-neutral-400 hover:bg-neutral-900 hover:text-white"
+                >
+                  <Settings className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Configure Ollama...</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Sliding Capsule Selector (>=sm) */}
+      <div className="hidden sm:flex p-0.5 rounded-full bg-neutral-900 border border-neutral-800 shadow-inner">
         <button
           onClick={() => setModel('gemini')}
-          className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
             model === 'gemini'
               ? 'bg-neutral-800 text-white shadow-sm border border-neutral-700/50'
               : 'text-neutral-400 hover:text-neutral-250'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-          <span className="truncate max-w-[70px] sm:max-w-none">Gemini</span>
+          <span>Gemini</span>
         </button>
 
         <button
           onClick={() => setModel('local')}
-          className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
             model === 'local'
               ? 'bg-neutral-800 text-white shadow-sm border border-neutral-700/50'
               : 'text-neutral-400 hover:text-neutral-250'
           }`}
         >
           <Cpu className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span className="truncate max-w-[70px] sm:max-w-none">Local LLM</span>
+          <span>Local LLM</span>
         </button>
       </div>
 

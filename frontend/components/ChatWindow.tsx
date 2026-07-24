@@ -276,19 +276,19 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
     <div data-testid="chat-window" className="flex flex-1 flex-col h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden relative">
 
       {/* Top Header */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-900 bg-neutral-950/80 px-4 md:px-6 backdrop-blur-md z-10">
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-900 bg-neutral-950/80 px-3 md:px-6 backdrop-blur-md z-10 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
           <button
             onClick={onMenuToggle}
-            className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer"
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer shrink-0"
             title="Toggle Sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex flex-col min-w-0">
-            <h2 className="text-sm font-semibold text-neutral-200 truncate pr-4 flex items-center gap-1.5">
+          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+            <h2 className="text-xs sm:text-sm font-semibold text-neutral-200 truncate flex items-center gap-1.5 min-w-0">
               {agentDetails && (
-                <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm select-none shrink-0 overflow-hidden">
+                <span className="h-5 w-5 sm:h-6 sm:w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-xs sm:text-sm shadow-sm select-none shrink-0 overflow-hidden">
                   {agentDetails.avatar_url && (agentDetails.avatar_url.startsWith('data:image/') || agentDetails.avatar_url.includes('/') || agentDetails.avatar_url.startsWith('http')) ? (
                     <img 
                       src={agentDetails.avatar_url.startsWith('data:') || agentDetails.avatar_url.startsWith('http') ? agentDetails.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agentDetails.avatar_url}`}
@@ -300,31 +300,33 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
                   )}
                 </span>
               )}
-              <span>{chatTitle}</span>
+              <span className="truncate">{chatTitle}</span>
             </h2>
-            <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium">
-              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${agentDetails ? 'bg-indigo-550' : 'bg-emerald-500'}`} />
-              <span>
+            <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium truncate">
+              <span className={`h-1.5 w-1.5 rounded-full animate-pulse shrink-0 ${agentDetails ? 'bg-indigo-550' : 'bg-emerald-500'}`} />
+              <span className="truncate">
                 {agentDetails 
-                  ? `Locked: ${agentDetails.preferred_model === 'local' ? `Local LLM (${agentDetails.local_model_name || 'llama3.2'})` : 'Gemini Cloud'}`
-                  : (model === 'local' ? `Local LLM (${localModel})` : 'Gemini 2.5 Flash')
+                  ? `Locked: ${agentDetails.preferred_model === 'local' ? `Local (${agentDetails.local_model_name || 'llama3.2'})` : 'Gemini'}`
+                  : (model === 'local' ? `Local (${localModel})` : 'Gemini 2.5 Flash')
                 }
               </span>
             </div>
           </div>
         </div>
-        {agentDetails ? (
-          <button
-            onClick={() => openAgentModal(agentDetails.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-indigo-400 hover:text-indigo-350 font-bold uppercase tracking-wide mr-2 shadow-sm cursor-pointer transition-colors"
-            title="Configure Agent Settings"
-          >
-            <Settings className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Configure Agent</span>
-          </button>
-        ) : (
-          <ModelSelector />
-        )}
+        <div className="shrink-0 flex items-center">
+          {agentDetails ? (
+            <button
+              onClick={() => openAgentModal(agentDetails.id)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-[10px] text-indigo-400 hover:text-indigo-350 font-bold uppercase tracking-wide shadow-sm cursor-pointer transition-colors"
+              title="Configure Agent Settings"
+            >
+              <Settings className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span className="hidden sm:inline">Configure Agent</span>
+            </button>
+          ) : (
+            <ModelSelector />
+          )}
+        </div>
       </header>
 
       {/* Messages Scroll Area */}

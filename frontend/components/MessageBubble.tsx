@@ -17,12 +17,12 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
   return (
     <div 
       data-testid={isUser ? 'message-user' : 'message-assistant'}
-      className={`flex w-full gap-4 py-5 px-4 md:px-6 transition-all ${
+      className={`flex w-full gap-2 sm:gap-4 py-3 sm:py-5 px-2.5 sm:px-4 md:px-6 transition-all ${
         isUser ? 'bg-transparent flex-row-reverse' : 'bg-neutral-900/35 border-y border-neutral-900/50'
       }`}
     >
-      {/* Avatar */}
-      <div className={`flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-xl text-sm font-semibold shadow-md ${
+      {/* Avatar (Hidden on Mobile to maximize message area space, visible on Desktop) */}
+      <div className={`hidden sm:flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-xl text-sm font-semibold shadow-md ${
         isUser 
           ? 'bg-neutral-800 text-neutral-200 border border-neutral-700' 
           : 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white'
@@ -31,22 +31,22 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
       </div>
 
       {/* Message Body */}
-      <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`rounded-2xl px-4 py-3 shadow-sm text-sm leading-relaxed ${
+      <div className={`flex flex-col w-full max-w-full sm:max-w-[85%] md:max-w-[75%] min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className={`rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm text-sm leading-relaxed max-w-full overflow-hidden ${
           isUser 
             ? 'bg-neutral-800 text-neutral-100 border border-neutral-700/60 rounded-tr-none' 
             : 'text-neutral-200 rounded-tl-none prose prose-invert max-w-none'
         }`}>
           {isUser ? (
-            <p className="whitespace-pre-wrap">{content}</p>
+            <p className="whitespace-pre-wrap break-words">{content}</p>
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed text-neutral-300">{children}</p>,
-                h1: ({ children }) => <h1 className="text-xl font-bold text-neutral-100 mt-4 mb-2">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-lg font-semibold text-neutral-200 mt-3 mb-2">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-md font-medium text-neutral-300 mt-2 mb-1">{children}</h3>,
+                p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed text-neutral-300 break-words">{children}</p>,
+                h1: ({ children }) => <h1 className="text-lg sm:text-xl font-bold text-neutral-100 mt-4 mb-2">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base sm:text-lg font-semibold text-neutral-200 mt-3 mb-2">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm sm:text-md font-medium text-neutral-300 mt-2 mb-1">{children}</h3>,
                 ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1 text-neutral-300">{children}</ul>,
                 ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-neutral-300">{children}</ol>,
                 li: ({ children }) => <li className="text-neutral-300">{children}</li>,
@@ -56,22 +56,22 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
                   </blockquote>
                 ),
                 table: ({ children }) => (
-                  <div className="overflow-x-auto my-4 rounded-xl border border-neutral-800">
-                    <table className="min-w-full divide-y divide-neutral-800 text-left text-sm">{children}</table>
+                  <div className="overflow-x-auto max-w-full my-3 sm:my-4 rounded-xl border border-neutral-800">
+                    <table className="min-w-full divide-y divide-neutral-800 text-left text-xs sm:text-sm">{children}</table>
                   </div>
                 ),
                 thead: ({ children }) => <thead className="bg-neutral-900/50 text-neutral-200 font-semibold">{children}</thead>,
                 tbody: ({ children }) => <tbody className="divide-y divide-neutral-800 bg-neutral-950/20">{children}</tbody>,
                 tr: ({ children }) => <tr className="hover:bg-neutral-900/20 transition-colors">{children}</tr>,
-                th: ({ children }) => <th className="p-3 font-semibold border-b border-neutral-800">{children}</th>,
-                td: ({ children }) => <td className="p-3 text-neutral-300">{children}</td>,
+                th: ({ children }) => <th className="p-2.5 sm:p-3 font-semibold border-b border-neutral-800 whitespace-nowrap">{children}</th>,
+                td: ({ children }) => <td className="p-2.5 sm:p-3 text-neutral-300 whitespace-nowrap">{children}</td>,
                 code: ({ className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || '');
                   const isBlock = !props.style && (match || String(children).includes('\n'));
                   return isBlock ? (
                     <CodeBlock language={match ? match[1] : 'code'} value={String(children).replace(/\n$/, '')} />
                   ) : (
-                    <code className="rounded bg-neutral-800/80 px-1.5 py-0.5 font-mono text-xs text-neutral-200 border border-neutral-700/30" {...props}>
+                    <code className="rounded bg-neutral-800/80 px-1.5 py-0.5 font-mono text-xs text-neutral-200 border border-neutral-700/30 break-all" {...props}>
                       {children}
                     </code>
                   );
@@ -109,12 +109,12 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
   };
 
   return (
-    <div className="my-4 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 shadow-lg max-w-full">
-      <div className="flex items-center justify-between border-b border-neutral-800/80 bg-neutral-900/80 px-4 py-2 text-xs font-mono text-neutral-400">
-        <span className="uppercase text-neutral-300">{language}</span>
+    <div className="my-3 sm:my-4 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 shadow-lg w-full max-w-full">
+      <div className="flex items-center justify-between border-b border-neutral-800/80 bg-neutral-900/80 px-3.5 sm:px-4 py-2 text-xs font-mono text-neutral-400">
+        <span className="uppercase text-neutral-300 text-[10px] sm:text-xs font-semibold">{language}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 rounded-lg border border-neutral-800 hover:border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1 text-neutral-300 hover:text-white transition-all cursor-pointer"
+          className="flex items-center gap-1.5 rounded-lg border border-neutral-800 hover:border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1 text-neutral-300 hover:text-white transition-all cursor-pointer text-xs"
           title="Copy code"
         >
           {copied ? (
@@ -130,7 +130,7 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
           )}
         </button>
       </div>
-      <pre className="overflow-x-auto p-4 font-mono text-sm leading-relaxed text-neutral-200">
+      <pre className="overflow-x-auto p-3 sm:p-4 font-mono text-xs sm:text-sm leading-relaxed text-neutral-200 whitespace-pre max-w-full">
         <code>{value}</code>
       </pre>
     </div>
