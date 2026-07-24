@@ -431,7 +431,7 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
       </div>
 
       {/* Input container */}
-      <footer className="shrink-0 p-4 md:p-6 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent">
+      <footer className="shrink-0 p-3 sm:p-6 pb-safe bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent">
         <div className="max-w-3xl mx-auto">
 
           {/* Active vector documents library bar */}

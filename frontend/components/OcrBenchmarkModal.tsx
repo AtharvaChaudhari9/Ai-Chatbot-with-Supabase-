@@ -153,7 +153,7 @@ export default function OcrBenchmarkModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md transition-opacity duration-300">
       
       {/* Modal Dialog Content container */}
-      <div className="relative flex h-[85vh] w-full max-w-4xl flex-col rounded-3xl border border-neutral-800 bg-neutral-950 p-6 text-neutral-200 shadow-2xl overflow-hidden">
+      <div className="relative flex max-h-[90dvh] h-full w-full max-w-4xl flex-col rounded-3xl border border-neutral-800 bg-neutral-950 p-4 sm:p-6 text-neutral-200 shadow-2xl overflow-hidden">
         
         {/* Header bar */}
         <div className="flex items-center justify-between border-b border-neutral-900 pb-4">

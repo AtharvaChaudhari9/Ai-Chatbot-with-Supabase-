@@ -160,6 +160,11 @@ export default function ChatLayoutClient({
     setAgentModalOpen(true);
   };
 
+  // Auto-close sidebar drawer when navigating on mobile devices
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   // Safely initialize values from localStorage on mount
   useEffect(() => {
     const savedModel = localStorage.getItem('chat-model-preference');
@@ -196,17 +201,17 @@ export default function ChatLayoutClient({
 
   if (isMfaEnabled && !mfaVerified && !isMfaLoading) {
     return (
-      <div className="relative flex h-screen w-screen items-center justify-center bg-[#050505] text-neutral-200 px-4 overflow-hidden select-none font-sans">
+      <div className="relative flex h-[100dvh] w-full items-center justify-center bg-[#050505] text-neutral-200 px-4 overflow-hidden select-none font-sans">
         {/* Glowing background spotlights */}
         <div className="absolute top-[-20%] left-[-20%] h-[600px] w-[600px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-[-20%] right-[-20%] h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
         {/* Centered MFA Verification Card */}
-        <div data-testid="mfa-card" className="z-10 w-full max-w-[420px] rounded-3xl border border-neutral-900 bg-neutral-950/60 p-10 shadow-2xl backdrop-blur-xl">
+        <div data-testid="mfa-card" className="z-10 w-full max-w-[420px] max-h-[90dvh] overflow-y-auto rounded-3xl border border-neutral-900 bg-neutral-950/60 p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
           <div className="flex flex-col items-center mb-5">
             {/* Visual lock icon */}
             <div className="h-14 w-14 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-6 h-6 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
             <h3 className="text-sm font-bold text-neutral-200 uppercase tracking-wider mb-5">Two-Factor Authentication</h3>
 
@@ -257,7 +262,7 @@ export default function ChatLayoutClient({
 
             {otpError && (
               <div className="flex items-start gap-2.5 rounded-xl border border-red-950/40 bg-red-950/15 text-red-400 p-3.5 text-xs font-semibold leading-relaxed animate-in fade-in duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-4 h-4 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 <span>{otpError}</span>
               </div>
             )}
@@ -270,7 +275,7 @@ export default function ChatLayoutClient({
             >
               {isVerifyingOtp ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   Verifying...
                 </>
               ) : (
@@ -287,7 +292,15 @@ export default function ChatLayoutClient({
     <SidebarContext.Provider value={{ isOpen: sidebarOpen, toggle }}>
       <ModelContext.Provider value={{ model, setModel, localUrl, setLocalUrl, localModel, setLocalModel }}>
         <AgentContext.Provider value={{ agents, refreshAgents, openAgentModal }}>
-          <div className="flex h-screen w-screen overflow-hidden bg-[#0a0a0a]">
+          <div className="flex h-[100dvh] w-full overflow-hidden bg-[#0a0a0a] relative">
+            {/* Mobile Backdrop Overlay */}
+            {sidebarOpen && (
+              <div 
+                onClick={() => setSidebarOpen(false)}
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
+                aria-hidden="true"
+              />
+            )}
             <Sidebar
               chats={chats}
               currentChatId={currentChatId}
@@ -305,7 +318,7 @@ export default function ChatLayoutClient({
               isOpen={sidebarOpen}
               onClose={() => setSidebarOpen(false)}
             />
-            <main className="flex flex-1 flex-col h-full overflow-hidden">
+            <main className="flex flex-1 flex-col h-full overflow-hidden min-w-0">
               {children}
             </main>
           </div>
@@ -320,3 +333,4 @@ export default function ChatLayoutClient({
     </SidebarContext.Provider>
   );
 }
+

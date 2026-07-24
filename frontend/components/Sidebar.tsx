@@ -297,6 +297,7 @@ export default function Sidebar({
   };
 
   const handleNewChat = () => {
+    onClose();
     startTransition(async () => {
       try {
         await createChat();
@@ -307,6 +308,7 @@ export default function Sidebar({
   };
 
   const handleStartAgentChat = (agentId: string) => {
+    onClose();
     setIsStartingAgent(agentId);
     startTransition(async () => {
       try {
@@ -787,8 +789,8 @@ export default function Sidebar({
 
       {/* Settings Modal */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-[420px] rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-[92%] sm:w-[420px] max-h-[90dvh] overflow-y-auto rounded-3xl border border-neutral-900 bg-neutral-950 p-6 shadow-2xl transition-all">
             <div className="flex items-center justify-between mb-5 border-b border-neutral-905 bg-neutral-950 border-neutral-900 pb-3">
               <h3 className="text-xs font-bold text-neutral-200 uppercase tracking-wider select-none">User Settings</h3>
               <button 

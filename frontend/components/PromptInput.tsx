@@ -218,7 +218,7 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
           type="button"
           onClick={handlePaperclipClick}
           disabled={disabled || isUploading}
-          className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all duration-300 self-center disabled:opacity-50 cursor-pointer shrink-0"
+          className="p-2.5 sm:p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all duration-300 self-center disabled:opacity-50 cursor-pointer shrink-0"
           title="Upload document for RAG search (PDF, Text, Code)"
         >
           {isUploading ? (
@@ -236,21 +236,21 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
           onKeyDown={handleKeyDown}
           placeholder={isListening ? "Listening... Speak now." : "Ask anything"}
           disabled={disabled}
-          className="flex-1 max-h-48 resize-none bg-transparent py-2 px-3 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none disabled:opacity-50"
+          className="flex-1 max-h-48 resize-none bg-transparent py-2 px-2.5 sm:px-3 text-base md:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none disabled:opacity-50"
           style={{ minHeight: '38px' }}
           data-testid="chat-input"
         />
 
         <div className="flex items-center gap-1.5 self-center pr-1">
           {disabled ? (
-            <div className="p-2 rounded-xl bg-neutral-800 text-neutral-500">
+            <div className="p-2.5 sm:p-2 rounded-xl bg-neutral-800 text-neutral-500">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : isValueEmpty ? (
             <button
               type="button"
               onClick={handleSpeechToggle}
-              className={`p-2 rounded-xl transition-all duration-300 ${isListening
+              className={`p-2.5 sm:p-2 rounded-xl transition-all duration-300 ${isListening
                 ? 'bg-emerald-500 text-white animate-pulse'
                 : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white'
                 }`}
@@ -263,7 +263,7 @@ export default function PromptInput({ onSend, disabled, chatId, onUploadSuccess 
             <button
               type="button"
               onClick={handleSend}
-              className="p-2 rounded-xl bg-white hover:bg-neutral-200 text-black transition-colors"
+              className="p-2.5 sm:p-2 rounded-xl bg-white hover:bg-neutral-200 text-black transition-colors"
               title="Send Prompt"
               data-testid="send-button"
             >

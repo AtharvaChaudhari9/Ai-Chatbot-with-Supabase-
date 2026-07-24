@@ -90,26 +90,26 @@ export default function ModelSelector() {
       <div className="flex p-0.5 rounded-full bg-neutral-900 border border-neutral-800 shadow-inner">
         <button
           onClick={() => setModel('gemini')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
+          className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
             model === 'gemini'
               ? 'bg-neutral-800 text-white shadow-sm border border-neutral-700/50'
               : 'text-neutral-400 hover:text-neutral-250'
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Gemini API</span>
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <span className="truncate max-w-[70px] sm:max-w-none">Gemini</span>
         </button>
 
         <button
           onClick={() => setModel('local')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
+          className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-205 cursor-pointer ${
             model === 'local'
               ? 'bg-neutral-800 text-white shadow-sm border border-neutral-700/50'
               : 'text-neutral-400 hover:text-neutral-250'
           }`}
         >
-          <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Local LLM</span>
+          <Cpu className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className="truncate max-w-[70px] sm:max-w-none">Local LLM</span>
         </button>
       </div>
 
@@ -128,7 +128,7 @@ export default function ModelSelector() {
           {isOpen && (
             <div
               ref={popoverRef}
-              className="absolute right-0 mt-2 w-72 rounded-2xl border border-neutral-850 bg-neutral-950 p-4 shadow-xl z-50 text-left animate-in fade-in duration-200"
+              className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-72 rounded-2xl border border-neutral-850 bg-neutral-950 p-4 shadow-xl z-50 text-left animate-in fade-in duration-200"
             >
               <div className="flex items-center justify-between mb-3 border-b border-neutral-900 pb-2">
                 <span className="text-xs font-semibold text-neutral-250">Local LLM Config</span>
