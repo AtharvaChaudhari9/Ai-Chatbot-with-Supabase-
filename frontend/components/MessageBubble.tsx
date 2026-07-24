@@ -32,10 +32,10 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
 
       {/* Message Body */}
       <div className={`flex flex-col w-full max-w-full sm:max-w-[85%] md:max-w-[75%] min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm text-sm leading-relaxed min-w-0 max-w-full overflow-x-auto scrollbar-thin ${
+        <div className={`rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm text-sm leading-relaxed min-w-0 w-full max-w-full overflow-x-hidden ${
           isUser 
             ? 'bg-neutral-800 text-neutral-100 border border-neutral-700/60 rounded-tr-none' 
-            : 'text-neutral-200 rounded-tl-none prose prose-invert max-w-none'
+            : 'text-neutral-200 rounded-tl-none markdown-content'
         }`}>
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{content}</p>

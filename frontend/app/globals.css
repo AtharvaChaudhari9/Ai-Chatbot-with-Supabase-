@@ -37,3 +37,27 @@ body {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 16px);
 }
+
+/* Markdown text break rules for mobile viewports */
+.markdown-content p,
+.markdown-content li,
+.markdown-content span,
+.markdown-content div {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Preformatted code blocks and tables horizontal scroll styling */
+.markdown-content pre {
+  max-width: 100%;
+  overflow-x: auto !important;
+  white-space: pre !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-content table {
+  max-width: 100%;
+  display: block;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
