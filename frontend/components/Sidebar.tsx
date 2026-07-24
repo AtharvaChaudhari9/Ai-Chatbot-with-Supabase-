@@ -412,6 +412,7 @@ export default function Sidebar({
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activeMenuChatId, setActiveMenuChatId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
 
   const agentDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -420,10 +421,11 @@ export default function Sidebar({
   // Close popover menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (agentDropdownRef.current && !agentDropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (agentDropdownRef.current && !agentDropdownRef.current.contains(target) && !target.closest('[title="Select Specialized Agent"]')) {
         setIsAgentDropdownOpen(false);
       }
-      if (chatMenuRef.current && !chatMenuRef.current.contains(event.target as Node)) {
+      if (chatMenuRef.current && !chatMenuRef.current.contains(target) && !target.closest('[data-testid="chat-options-button"]')) {
         setActiveMenuChatId(null);
       }
     };
@@ -504,7 +506,17 @@ export default function Sidebar({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setActiveMenuChatId(isMenuOpen ? null : chat.id);
+                  if (isMenuOpen) {
+                    setActiveMenuChatId(null);
+                    setMenuPosition(null);
+                  } else {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setMenuPosition({
+                      top: rect.bottom + 4,
+                      left: Math.max(10, rect.right - 144)
+                    });
+                    setActiveMenuChatId(chat.id);
+                  }
                 }}
                 className={`rounded-lg p-1 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors cursor-pointer ${
                   isMenuOpen ? 'bg-neutral-800 text-white opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
@@ -515,11 +527,12 @@ export default function Sidebar({
                 <MoreVertical className="w-3.5 h-3.5" />
               </button>
 
-              {/* Overlaid Popover Dropdown for Chat CRUD Options */}
-              {isMenuOpen && (
+              {/* Overlaid Popover Dropdown (Fixed positioning to float OVER the sidebar) */}
+              {isMenuOpen && menuPosition && (
                 <div 
                   ref={chatMenuRef}
-                  className="absolute right-0 top-7 z-50 w-36 rounded-xl bg-neutral-900 border border-neutral-800 p-1 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-0.5"
+                  style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+                  className="fixed z-[100] w-36 rounded-xl bg-neutral-900 border border-neutral-800 p-1 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-0.5"
                 >
                   <button
                     type="button"
