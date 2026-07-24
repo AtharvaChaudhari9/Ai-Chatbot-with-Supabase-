@@ -72,7 +72,7 @@ export default function ChatLayoutClient({
   initialMfaEnabled: boolean;
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [model, setModelVal] = useState<ModelType>('gemini');
   const [localUrl, setLocalUrlVal] = useState('http://127.0.0.1:11434');
   const [localModel, setLocalModelVal] = useState('llama3.2');
@@ -160,9 +160,11 @@ export default function ChatLayoutClient({
     setAgentModalOpen(true);
   };
 
-  // Auto-close sidebar drawer when navigating on mobile devices
+  // Auto-close sidebar drawer when navigating on mobile devices only
   useEffect(() => {
-    setSidebarOpen(false);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   }, [pathname]);
 
   // Safely initialize values from localStorage on mount

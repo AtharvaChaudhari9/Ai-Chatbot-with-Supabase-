@@ -410,7 +410,21 @@ export default function Sidebar({
   };
 
 
-  const [isAgentsSectionOpen, setIsAgentsSectionOpen] = useState(true);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+  // Automatically default to the most recent custom agent on new login / session
+  useEffect(() => {
+    if (currentChatId) {
+      const currentChat = chats.find(c => c.id === currentChatId);
+      if (currentChat && currentChat.agent_id) {
+        setSelectedAgentId(currentChat.agent_id);
+        return;
+      }
+    }
+    if (!selectedAgentId && agents.length > 0) {
+      setSelectedAgentId(agents[0].id);
+    }
+  }, [agents, currentChatId]);
 
   const renderChatItem = (chat: ChatItem) => {
     const isActive = chat.id === currentChatId;
@@ -512,9 +526,9 @@ export default function Sidebar({
         />
       )}
 
-      {/* Sidebar Drawer container */}
-      <aside data-testid="sidebar" className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-200 transition-transform duration-300 md:static md:translate-x-0 h-full overflow-hidden ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+      {/* Sidebar Drawer container (Supports Collapsing on Both Windows & Android) */}
+      <aside data-testid="sidebar" className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-200 transition-all duration-300 md:static h-full overflow-hidden shrink-0 ${
+        isOpen ? 'w-72 translate-x-0' : 'w-0 -translate-x-full border-none pointer-events-none'
       }`}>
         
         {/* Top Header: Logged-in User Profile & Settings Trigger */}
@@ -556,9 +570,11 @@ export default function Sidebar({
             </div>
           </button>
 
+          {/* Close Sidebar X button for both Windows and Android */}
           <button 
             onClick={onClose}
-            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer shrink-0"
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white cursor-pointer shrink-0"
+            title="Close Sidebar"
           >
             <X className="w-5 h-5" />
           </button>
@@ -581,22 +597,13 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Specialized Agents Section (Collapsible & Dedicated Scroll, Max 45% Sidebar Height) */}
+        {/* Specialized Agents Section (Dropdown Select & Selected Custom Agent Display) */}
         <div className="px-3.5 pb-2.5 border-b border-neutral-900/60 flex flex-col max-h-[45%] shrink-0">
           <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-neutral-500 uppercase mb-2 select-none">
-            <button
-              type="button"
-              onClick={() => setIsAgentsSectionOpen(!isAgentsSectionOpen)}
-              className="flex items-center gap-1.5 hover:text-neutral-200 transition-colors cursor-pointer text-left"
-            >
+            <span className="flex items-center gap-1.5">
               <Bot className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span>Specialized Agents ({agents.length})</span>
-              {isAgentsSectionOpen ? (
-                <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-              )}
-            </button>
+              Specialized Agents ({agents.length})
+            </span>
             <button
               type="button"
               onClick={() => openAgentModal(null)}
@@ -607,58 +614,57 @@ export default function Sidebar({
             </button>
           </div>
 
-          {isAgentsSectionOpen && (
-            <div className="space-y-1.5 overflow-y-auto pr-1 select-none scrollbar-thin max-h-full">
-              {agents.map((agent) => {
-                const hasChats = chats.some(c => c.agent_id === agent.id);
-                const isExpanded = !!expandedAgents[agent.id];
-                const agentChats = filteredChats.filter(chat => chat.agent_id === agent.id);
+          {agents.length > 0 ? (
+            <div className="flex flex-col gap-2 min-h-0">
+              {/* Dropdown Select Box */}
+              <div className="relative">
+                <select
+                  value={selectedAgentId || ''}
+                  onChange={(e) => setSelectedAgentId(e.target.value)}
+                  className="w-full appearance-none rounded-xl border border-neutral-850 bg-neutral-900 px-3 py-2 text-xs font-semibold text-neutral-200 focus:border-neutral-700 focus:outline-none cursor-pointer pr-8 shadow-sm"
+                >
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id} className="bg-neutral-950 text-neutral-200 py-1">
+                      {agent.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              </div>
+
+              {/* Render ONLY the selected custom agent and its sub-chats */}
+              {(() => {
+                const selectedAgent = agents.find(a => a.id === selectedAgentId) || agents[0];
+                if (!selectedAgent) return null;
+                const selectedAgentChats = filteredChats.filter(chat => chat.agent_id === selectedAgent.id);
 
                 return (
-                  <div key={agent.id} className="flex flex-col">
-                    <div
-                      className="group relative flex items-center rounded-xl text-xs hover:bg-neutral-900/60 text-neutral-400 hover:text-neutral-200 border border-transparent transition-all"
-                    >
-                      {/* Expand/Collapse Chevron or alignment spacer */}
-                      {hasChats ? (
-                        <button
-                          onClick={(e) => toggleAgentExpand(agent.id, e)}
-                          className="p-1 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors ml-1 cursor-pointer shrink-0"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          ) : (
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      ) : (
-                        <div className="w-5.5 ml-1 shrink-0" />
-                      )}
-
+                  <div className="flex flex-col rounded-xl bg-neutral-900/40 border border-neutral-850/60 p-1.5">
+                    <div className="group relative flex items-center rounded-lg text-xs hover:bg-neutral-850/80 text-neutral-300">
                       <button
-                        onClick={() => handleAgentClick(agent.id)}
+                        onClick={() => handleAgentClick(selectedAgent.id)}
                         disabled={isStartingAgent !== null}
-                        className="flex flex-1 items-center gap-2 px-2 py-2 overflow-hidden text-left cursor-pointer"
+                        className="flex flex-1 items-center gap-2 px-2 py-1.5 overflow-hidden text-left cursor-pointer"
                       >
-                        <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm shrink-0 overflow-hidden">
-                          {agent.avatar_url && (agent.avatar_url.startsWith('data:image/') || agent.avatar_url.includes('/') || agent.avatar_url.startsWith('http')) ? (
+                        <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                          {selectedAgent.avatar_url && (selectedAgent.avatar_url.startsWith('data:') || selectedAgent.avatar_url.startsWith('http') || selectedAgent.avatar_url.includes('/')) ? (
                             <img 
-                              src={agent.avatar_url.startsWith('data:') || agent.avatar_url.startsWith('http') ? agent.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agent.avatar_url}`}
-                              alt={agent.name}
+                              src={selectedAgent.avatar_url.startsWith('data:') || selectedAgent.avatar_url.startsWith('http') ? selectedAgent.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${selectedAgent.avatar_url}`}
+                              alt={selectedAgent.name}
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <span>{agent.avatar_url || '🤖'}</span>
+                            <span>{selectedAgent.avatar_url || '🤖'}</span>
                           )}
                         </span>
-                        <span className="truncate pr-10 font-semibold">{agent.name}</span>
+                        <span className="truncate pr-16 font-bold text-neutral-200">{selectedAgent.name}</span>
                       </button>
 
-                      {/* Actions: New Chat, Edit, Delete (Always accessible on Mobile, Hover on Desktop) */}
-                      <div className="absolute right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      {/* Actions: New Chat, Edit, Delete */}
+                      <div className="absolute right-1.5 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
-                          onClick={() => handleStartAgentChat(agent.id)}
+                          onClick={() => handleStartAgentChat(selectedAgent.id)}
                           className="rounded p-0.5 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
                           title="New Chat with Agent"
                         >
@@ -666,7 +672,7 @@ export default function Sidebar({
                         </button>
                         <button
                           type="button"
-                          onClick={() => openAgentModal(agent.id)}
+                          onClick={() => openAgentModal(selectedAgent.id)}
                           className="rounded p-0.5 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
                           title="Edit Agent"
                         >
@@ -674,7 +680,7 @@ export default function Sidebar({
                         </button>
                         <button
                           type="button"
-                          onClick={(e) => handleDeleteAgent(e, agent.id)}
+                          onClick={(e) => handleDeleteAgent(e, selectedAgent.id)}
                           className="rounded p-0.5 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-red-400 cursor-pointer"
                           title="Delete Agent"
                         >
@@ -683,20 +689,19 @@ export default function Sidebar({
                       </div>
                     </div>
 
-                    {/* Indented nested chats */}
-                    {isExpanded && agentChats.length > 0 && (
-                      <div className="pl-4 mt-0.5 mb-1.5 space-y-0.5 border-l border-neutral-800 ml-[18px]">
-                        {agentChats.map(renderChatItem)}
+                    {/* Sub-chats for ONLY the selected agent */}
+                    {selectedAgentChats.length > 0 && (
+                      <div className="mt-1 space-y-0.5 max-h-36 overflow-y-auto scrollbar-thin pl-1">
+                        {selectedAgentChats.map(renderChatItem)}
                       </div>
                     )}
                   </div>
                 );
-              })}
-              {agents.length === 0 && (
-                <div className="text-[10px] text-neutral-600 italic py-1.5 px-2.5 select-none">
-                  No custom agents yet.
-                </div>
-              )}
+              })()}
+            </div>
+          ) : (
+            <div className="text-[10px] text-neutral-600 italic py-1 select-none">
+              No custom agents created yet.
             </div>
           )}
         </div>

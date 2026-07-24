@@ -280,7 +280,7 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 overflow-hidden">
           <button
             onClick={onMenuToggle}
-            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer shrink-0"
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white cursor-pointer shrink-0"
             title="Toggle Sidebar"
           >
             <Menu className="w-5 h-5" />
