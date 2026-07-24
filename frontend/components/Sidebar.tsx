@@ -410,6 +410,8 @@ export default function Sidebar({
   };
 
 
+  const [isAgentsSectionOpen, setIsAgentsSectionOpen] = useState(true);
+
   const renderChatItem = (chat: ChatItem) => {
     const isActive = chat.id === currentChatId;
     const isEditing = editingId === chat.id;
@@ -461,29 +463,29 @@ export default function Sidebar({
               <span className="truncate pr-16 text-[11px]">{chat.title}</span>
             </Link>
 
-            {/* Hover Actions: Rename, Delete */}
-            <div className="absolute right-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Actions: Rename, Delete (Always accessible on Mobile/Android, Hover on Desktop) */}
+            <div className="absolute right-2.5 flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <button
                 type="button"
                 onClick={(e) => handleStartRename(e, chat.id, chat.title)}
-                className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
+                className="rounded p-1 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
                 title="Rename Chat"
                 data-testid="rename-chat-button"
               >
-                <Edit2 className="w-3 h-3" />
+                <Edit2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
               </button>
               <button
                 type="button"
                 disabled={deletingId === chat.id}
                 onClick={(e) => handleDelete(e, chat.id)}
-                className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-red-400 cursor-pointer"
+                className="rounded p-1 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-red-400 cursor-pointer"
                 title="Delete Chat"
                 data-testid="delete-chat-button"
               >
                 {deletingId === chat.id ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
                 ) : (
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                 )}
               </button>
             </div>
@@ -511,30 +513,59 @@ export default function Sidebar({
       )}
 
       {/* Sidebar Drawer container */}
-      <aside data-testid="sidebar" className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-200 transition-transform duration-300 md:static md:translate-x-0 ${
+      <aside data-testid="sidebar" className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-200 transition-transform duration-300 md:static md:translate-x-0 h-full overflow-hidden ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         
-        {/* Header Title */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-neutral-900 bg-neutral-950">
-          <Link href="/chat" className="flex items-center gap-2 cursor-pointer">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-md">
-              <Sparkles className="w-4 h-4 text-white" />
-            </span>
-            <span className="font-bold text-md bg-gradient-to-r from-neutral-100 to-neutral-400 bg-clip-text text-transparent">
-              Cognexa
-            </span>
-          </Link>
+        {/* Top Header: Logged-in User Profile & Settings Trigger */}
+        <div className="flex h-16 items-center justify-between px-3.5 border-b border-neutral-900 bg-neutral-950 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setEditNickname(nickname || defaultName || '');
+              setEditAvatarUrl(avatarUrl || defaultImage || '');
+              setMfaSetupError('');
+              setMfaSetupSuccess(false);
+              setQrCodeUrl(null);
+              setTempSecret(null);
+              setOtpCodeInput('');
+              setIsSettingsOpen(true);
+            }}
+            className="flex items-center gap-2.5 cursor-pointer group text-left min-w-0 flex-1 pr-2"
+            title="Account Settings"
+          >
+            {avatarUrl || defaultImage ? (
+              <img 
+                src={avatarUrl || defaultImage} 
+                alt="Profile" 
+                className="h-8 w-8 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/20 group-hover:ring-indigo-500/50 transition-all"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-xs text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none group-hover:border-indigo-500/50 transition-all">
+                {(nickname || defaultName || userEmail || 'US').substring(0, 2)}
+              </div>
+            )}
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-xs text-neutral-200 truncate group-hover:text-indigo-300 transition-colors leading-tight">
+                {nickname || defaultName || 'User Account'}
+              </span>
+              <span className="text-[9px] text-neutral-500 truncate leading-none mt-0.5">
+                Account Settings
+              </span>
+            </div>
+          </button>
+
           <button 
             onClick={onClose}
-            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer"
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Action Button: New Chat */}
-        <div className="p-3.5 pb-2">
+        <div className="p-3.5 pb-2 shrink-0">
           <button
             onClick={handleNewChat}
             disabled={isPending}
@@ -550,116 +581,128 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Specialized Agents list */}
-        <div className="px-3.5 pb-3.5 border-b border-neutral-900/60 flex flex-col min-h-0">
+        {/* Specialized Agents Section (Collapsible & Dedicated Scroll, Max 45% Sidebar Height) */}
+        <div className="px-3.5 pb-2.5 border-b border-neutral-900/60 flex flex-col max-h-[45%] shrink-0">
           <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-neutral-500 uppercase mb-2 select-none">
-            <span className="flex items-center gap-1.5">
-              <Bot className="w-3.5 h-3.5 text-indigo-400" />
-              Specialized Agents
-            </span>
             <button
+              type="button"
+              onClick={() => setIsAgentsSectionOpen(!isAgentsSectionOpen)}
+              className="flex items-center gap-1.5 hover:text-neutral-200 transition-colors cursor-pointer text-left"
+            >
+              <Bot className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span>Specialized Agents ({agents.length})</span>
+              {isAgentsSectionOpen ? (
+                <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+              )}
+            </button>
+            <button
+              type="button"
               onClick={() => openAgentModal(null)}
-              className="p-1 rounded text-neutral-500 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
+              className="p-1 rounded text-neutral-500 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer ml-auto"
               title="Create New Agent"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 select-none scrollbar-thin">
-            {agents.map((agent) => {
-              const hasChats = chats.some(c => c.agent_id === agent.id);
-              const isExpanded = !!expandedAgents[agent.id];
-              const agentChats = filteredChats.filter(chat => chat.agent_id === agent.id);
+          {isAgentsSectionOpen && (
+            <div className="space-y-1.5 overflow-y-auto pr-1 select-none scrollbar-thin max-h-full">
+              {agents.map((agent) => {
+                const hasChats = chats.some(c => c.agent_id === agent.id);
+                const isExpanded = !!expandedAgents[agent.id];
+                const agentChats = filteredChats.filter(chat => chat.agent_id === agent.id);
 
-              return (
-                <div key={agent.id} className="flex flex-col">
-                  <div
-                    className="group relative flex items-center rounded-xl text-xs hover:bg-neutral-900/60 text-neutral-400 hover:text-neutral-200 border border-transparent transition-all"
-                  >
-                    {/* Expand/Collapse Chevron or alignment spacer */}
-                    {hasChats ? (
-                      <button
-                        onClick={(e) => toggleAgentExpand(agent.id, e)}
-                        className="p-1 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors ml-1 cursor-pointer shrink-0"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    ) : (
-                      <div className="w-5.5 ml-1 shrink-0" />
-                    )}
-
-                    <button
-                      onClick={() => handleAgentClick(agent.id)}
-                      disabled={isStartingAgent !== null}
-                      className="flex flex-1 items-center gap-2 px-2 py-2 overflow-hidden text-left cursor-pointer"
+                return (
+                  <div key={agent.id} className="flex flex-col">
+                    <div
+                      className="group relative flex items-center rounded-xl text-xs hover:bg-neutral-900/60 text-neutral-400 hover:text-neutral-200 border border-transparent transition-all"
                     >
-                      <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm shrink-0 overflow-hidden">
-                        {agent.avatar_url && (agent.avatar_url.startsWith('data:image/') || agent.avatar_url.includes('/') || agent.avatar_url.startsWith('http')) ? (
-                          <img 
-                            src={agent.avatar_url.startsWith('data:') || agent.avatar_url.startsWith('http') ? agent.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agent.avatar_url}`}
-                            alt={agent.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span>{agent.avatar_url || '🤖'}</span>
-                        )}
-                      </span>
-                      <span className="truncate pr-10 font-semibold">{agent.name}</span>
-                    </button>
+                      {/* Expand/Collapse Chevron or alignment spacer */}
+                      {hasChats ? (
+                        <button
+                          onClick={(e) => toggleAgentExpand(agent.id, e)}
+                          className="p-1 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors ml-1 cursor-pointer shrink-0"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      ) : (
+                        <div className="w-5.5 ml-1 shrink-0" />
+                      )}
 
-                    {/* Hover Actions: New Chat, Edit, Delete */}
-                    <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
-                        type="button"
-                        onClick={() => handleStartAgentChat(agent.id)}
-                        className="rounded p-0.5 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
-                        title="New Chat with Agent"
+                        onClick={() => handleAgentClick(agent.id)}
+                        disabled={isStartingAgent !== null}
+                        className="flex flex-1 items-center gap-2 px-2 py-2 overflow-hidden text-left cursor-pointer"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <span className="h-6 w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-sm shadow-sm shrink-0 overflow-hidden">
+                          {agent.avatar_url && (agent.avatar_url.startsWith('data:image/') || agent.avatar_url.includes('/') || agent.avatar_url.startsWith('http')) ? (
+                            <img 
+                              src={agent.avatar_url.startsWith('data:') || agent.avatar_url.startsWith('http') ? agent.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agent.avatar_url}`}
+                              alt={agent.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span>{agent.avatar_url || '🤖'}</span>
+                          )}
+                        </span>
+                        <span className="truncate pr-10 font-semibold">{agent.name}</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => openAgentModal(agent.id)}
-                        className="rounded p-0.5 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
-                        title="Edit Agent"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteAgent(e, agent.id)}
-                        className="rounded p-0.5 text-neutral-500 hover:bg-neutral-800 hover:text-red-400 cursor-pointer"
-                        title="Delete Agent"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+
+                      {/* Actions: New Chat, Edit, Delete (Always accessible on Mobile, Hover on Desktop) */}
+                      <div className="absolute right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => handleStartAgentChat(agent.id)}
+                          className="rounded p-0.5 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
+                          title="New Chat with Agent"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openAgentModal(agent.id)}
+                          className="rounded p-0.5 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 cursor-pointer"
+                          title="Edit Agent"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteAgent(e, agent.id)}
+                          className="rounded p-0.5 text-neutral-400 sm:text-neutral-500 hover:bg-neutral-800 hover:text-red-400 cursor-pointer"
+                          title="Delete Agent"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Indented nested chats */}
+                    {isExpanded && agentChats.length > 0 && (
+                      <div className="pl-4 mt-0.5 mb-1.5 space-y-0.5 border-l border-neutral-800 ml-[18px]">
+                        {agentChats.map(renderChatItem)}
+                      </div>
+                    )}
                   </div>
-
-                  {/* Indented nested chats */}
-                  {isExpanded && agentChats.length > 0 && (
-                    <div className="pl-4 mt-0.5 mb-1.5 space-y-0.5 border-l border-neutral-800 ml-[18px]">
-                      {agentChats.map(renderChatItem)}
-                    </div>
-                  )}
+                );
+              })}
+              {agents.length === 0 && (
+                <div className="text-[10px] text-neutral-600 italic py-1.5 px-2.5 select-none">
+                  No custom agents yet.
                 </div>
-              );
-            })}
-            {agents.length === 0 && (
-              <div className="text-[10px] text-neutral-600 italic py-1.5 px-2.5 select-none">
-                No custom agents yet.
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Search Input bar */}
-        <div className="px-3.5 py-2">
+        <div className="px-3.5 py-2 shrink-0">
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 w-4 h-4 text-neutral-500" />
             <input
@@ -673,10 +716,10 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Recent Chats list */}
-        <div data-testid="chat-list" className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin">
-          <div className="px-3 mb-2 text-[10px] font-bold tracking-wider text-neutral-500 uppercase flex items-center gap-1.5">
-            <FolderOpen className="w-3.5 h-3.5" />
+        {/* Recent Chats list (Flex-1 with Dedicated Independent Scroll) */}
+        <div data-testid="chat-list" className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin min-h-0">
+          <div className="px-3 mb-2 text-[10px] font-bold tracking-wider text-neutral-500 uppercase flex items-center gap-1.5 select-none">
+            <FolderOpen className="w-3.5 h-3.5 text-neutral-400" />
             Recent Chats
           </div>
           {regularChats.length === 0 ? (
@@ -688,57 +731,11 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Footer Profile summary & Logout */}
-        <div className="mt-auto border-t border-neutral-900 bg-neutral-950 p-4 flex flex-col gap-2">
-          {userEmail && (
-            <div className="flex items-center justify-between gap-2 px-1 py-1">
-              <div className="flex items-center gap-2 min-w-0">
-                {/* Profile Picture */}
-                {avatarUrl || defaultImage ? (
-                  <img 
-                    src={avatarUrl || defaultImage} 
-                    alt="Profile" 
-                    className="h-8 w-8 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 hover:ring-indigo-500/35 transition-all"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-xs text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
-                    {(nickname || defaultName || userEmail || '').substring(0, 2)}
-                  </div>
-                )}
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-bold text-neutral-200 truncate select-none leading-tight">
-                    {nickname || defaultName || 'User Account'}
-                  </span>
-                  <span className="text-[9px] text-neutral-550 truncate leading-none">
-                    {userEmail}
-                  </span>
-                </div>
-              </div>
-
-              {/* Settings Gear Icon */}
-              <button
-                type="button"
-                onClick={() => {
-                  setEditNickname(nickname || defaultName || '');
-                  setEditAvatarUrl(avatarUrl || defaultImage || '');
-                  setMfaSetupError('');
-                  setMfaSetupSuccess(false);
-                  setQrCodeUrl(null);
-                  setTempSecret(null);
-                  setOtpCodeInput('');
-                  setIsSettingsOpen(true);
-                }}
-                className="p-1.5 rounded-lg text-neutral-550 hover:bg-neutral-900 hover:text-white cursor-pointer transition-colors shrink-0"
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+        {/* Footer Sign Out Button */}
+        <div className="mt-auto border-t border-neutral-900 bg-neutral-950 p-3 shrink-0">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center justify-between gap-2 rounded-xl bg-neutral-900 hover:bg-neutral-900/60 border border-neutral-800/80 px-3.5 py-2.5 text-xs text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer"
+            className="flex w-full items-center justify-between gap-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800/80 px-3.5 py-2.5 text-xs text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer"
             data-testid="logout-button"
           >
             <span>Sign Out</span>

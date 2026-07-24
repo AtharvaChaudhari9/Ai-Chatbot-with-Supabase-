@@ -277,7 +277,7 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
 
       {/* Top Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-900 bg-neutral-950/80 px-3 md:px-6 backdrop-blur-md z-10 gap-2">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 overflow-hidden">
           <button
             onClick={onMenuToggle}
             className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white md:hidden cursor-pointer shrink-0"
@@ -285,34 +285,47 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-            <h2 className="text-xs sm:text-sm font-semibold text-neutral-200 truncate flex items-center gap-1.5 min-w-0">
-              {agentDetails && (
-                <span className="h-5 w-5 sm:h-6 sm:w-6 rounded-lg bg-neutral-900 border border-neutral-850 flex items-center justify-center text-xs sm:text-sm shadow-sm select-none shrink-0 overflow-hidden">
-                  {agentDetails.avatar_url && (agentDetails.avatar_url.startsWith('data:image/') || agentDetails.avatar_url.includes('/') || agentDetails.avatar_url.startsWith('http')) ? (
-                    <img 
-                      src={agentDetails.avatar_url.startsWith('data:') || agentDetails.avatar_url.startsWith('http') ? agentDetails.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agentDetails.avatar_url}`}
-                      alt={agentDetails.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span>{agentDetails.avatar_url || '🤖'}</span>
-                  )}
-                </span>
+
+          {/* Column 1: Larger Agent Icon (if Custom Agent Chat) */}
+          {agentDetails && (
+            <span className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-base sm:text-lg shadow-sm select-none shrink-0 overflow-hidden">
+              {agentDetails.avatar_url && (agentDetails.avatar_url.startsWith('data:image/') || agentDetails.avatar_url.includes('/') || agentDetails.avatar_url.startsWith('http')) ? (
+                <img 
+                  src={agentDetails.avatar_url.startsWith('data:') || agentDetails.avatar_url.startsWith('http') ? agentDetails.avatar_url : `https://uelvnyetowoxhuvwxzal.supabase.co/storage/v1/object/public/documents/${agentDetails.avatar_url}`}
+                  alt={agentDetails.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>{agentDetails.avatar_url || '🤖'}</span>
               )}
-              <span className="truncate">{chatTitle}</span>
+            </span>
+          )}
+
+          {/* Column 2: Chat Title on Top, Model status with Lock Icon below */}
+          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+            <h2 className="text-xs sm:text-sm font-bold text-neutral-200 truncate leading-tight">
+              {chatTitle}
             </h2>
-            <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium truncate">
-              <span className={`h-1.5 w-1.5 rounded-full animate-pulse shrink-0 ${agentDetails ? 'bg-indigo-550' : 'bg-emerald-500'}`} />
-              <span className="truncate">
-                {agentDetails 
-                  ? `Locked: ${agentDetails.preferred_model === 'local' ? `Local (${agentDetails.local_model_name || 'llama3.2'})` : 'Gemini'}`
-                  : (model === 'local' ? `Local (${localModel})` : 'Gemini 2.5 Flash')
-                }
-              </span>
+            <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium truncate mt-0.5">
+              {agentDetails ? (
+                <>
+                  <Lock className="w-3 h-3 text-indigo-400 shrink-0" />
+                  <span className="truncate text-indigo-300 font-semibold">
+                    {agentDetails.preferred_model === 'local' ? `Local (${agentDetails.local_model_name || 'llama3.2'})` : 'Gemini 2.5 Flash'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={`h-1.5 w-1.5 rounded-full animate-pulse shrink-0 ${model === 'local' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
+                  <span className="truncate">
+                    {model === 'local' ? `Local (${localModel})` : 'Gemini 2.5 Flash'}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
+
         <div className="shrink-0 flex items-center">
           {agentDetails ? (
             <button
