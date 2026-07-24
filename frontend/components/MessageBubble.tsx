@@ -32,7 +32,7 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
 
       {/* Message Body */}
       <div className={`flex flex-col w-full max-w-full sm:max-w-[85%] md:max-w-[75%] min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm text-sm leading-relaxed max-w-full overflow-hidden ${
+        <div className={`rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm text-sm leading-relaxed min-w-0 max-w-full overflow-x-auto scrollbar-thin ${
           isUser 
             ? 'bg-neutral-800 text-neutral-100 border border-neutral-700/60 rounded-tr-none' 
             : 'text-neutral-200 rounded-tl-none prose prose-invert max-w-none'
@@ -49,14 +49,15 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
                 h3: ({ children }) => <h3 className="text-sm sm:text-md font-medium text-neutral-300 mt-2 mb-1">{children}</h3>,
                 ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1 text-neutral-300">{children}</ul>,
                 ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-neutral-300">{children}</ol>,
-                li: ({ children }) => <li className="text-neutral-300">{children}</li>,
+                li: ({ children }) => <li className="text-neutral-300 break-words">{children}</li>,
                 blockquote: ({ children }) => (
                   <blockquote className="border-l-4 border-indigo-500 pl-4 py-1 my-3 bg-indigo-950/10 italic text-neutral-400 rounded-r-md">
                     {children}
                   </blockquote>
                 ),
+                pre: ({ children }) => <div className="w-full min-w-0 max-w-full overflow-x-auto my-3 sm:my-4">{children}</div>,
                 table: ({ children }) => (
-                  <div className="overflow-x-auto max-w-full my-3 sm:my-4 rounded-xl border border-neutral-800">
+                  <div className="overflow-x-auto min-w-0 max-w-full my-3 sm:my-4 rounded-xl border border-neutral-800 scrollbar-thin">
                     <table className="min-w-full divide-y divide-neutral-800 text-left text-xs sm:text-sm">{children}</table>
                   </div>
                 ),
@@ -65,16 +66,17 @@ export default function MessageBubble({ role, content, createdAt }: MessageBubbl
                 tr: ({ children }) => <tr className="hover:bg-neutral-900/20 transition-colors">{children}</tr>,
                 th: ({ children }) => <th className="p-2.5 sm:p-3 font-semibold border-b border-neutral-800 whitespace-nowrap">{children}</th>,
                 td: ({ children }) => <td className="p-2.5 sm:p-3 text-neutral-300 whitespace-nowrap">{children}</td>,
-                code: ({ className, children, ...props }) => {
+                code: ({ className, children, ...props }: any) => {
                   const match = /language-(\w+)/.exec(className || '');
-                  const isBlock = !props.style && (match || String(children).includes('\n'));
-                  return isBlock ? (
-                    <CodeBlock language={match ? match[1] : 'code'} value={String(children).replace(/\n$/, '')} />
-                  ) : (
-                    <code className="rounded bg-neutral-800/80 px-1.5 py-0.5 font-mono text-xs text-neutral-200 border border-neutral-700/30 break-all" {...props}>
-                      {children}
-                    </code>
-                  );
+                  const isInline = props.inline || (!match && !String(children).includes('\n') && !className);
+                  if (isInline) {
+                    return (
+                      <code className="rounded bg-neutral-800/80 px-1.5 py-0.5 font-mono text-xs text-neutral-200 border border-neutral-700/30 break-all" {...props}>
+                        {children}
+                      </code>
+                    );
+                  }
+                  return <CodeBlock language={match ? match[1] : 'code'} value={String(children).replace(/\n$/, '')} />;
                 }
               }}
             >
@@ -109,7 +111,7 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
   };
 
   return (
-    <div className="my-3 sm:my-4 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 shadow-lg w-full max-w-full">
+    <div className="my-3 sm:my-4 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 shadow-lg w-full min-w-0 max-w-full">
       <div className="flex items-center justify-between border-b border-neutral-800/80 bg-neutral-900/80 px-3.5 sm:px-4 py-2 text-xs font-mono text-neutral-400">
         <span className="uppercase text-neutral-300 text-[10px] sm:text-xs font-semibold">{language}</span>
         <button
@@ -130,7 +132,7 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
           )}
         </button>
       </div>
-      <pre className="overflow-x-auto p-3 sm:p-4 font-mono text-xs sm:text-sm leading-relaxed text-neutral-200 whitespace-pre max-w-full">
+      <pre className="overflow-x-auto p-3 sm:p-4 font-mono text-xs sm:text-sm leading-relaxed text-neutral-200 whitespace-pre min-w-0 max-w-full scrollbar-thin">
         <code>{value}</code>
       </pre>
     </div>
