@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cognexa AI - RAG Chatbot",
-  description: "Multi-tenant RAG Chatbot powered by Qdrant, Ollama, and Supabase",
+  title: "Cognexa AI - Enterprise Knowledge Intelligence Platform",
+  description: "Enterprise Multi-Tenant Hybrid RAG Platform powered by Qdrant, FastAPI, Ollama, and Keycloak",
 };
 
 export const viewport: Viewport = {
