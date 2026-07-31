@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import PromptInput from './PromptInput';
-import { Menu, Sparkles, Loader2, Compass, PenTool, Code, AlertCircle, FileText, Trash2, Activity, Bot, Lock, X, Settings } from 'lucide-react';
+import { Menu, Sparkles, Loader2, Compass, PenTool, Code, AlertCircle, FileText, Trash2, Activity, Bot, Lock, X, Settings, Eye } from 'lucide-react';
 import { useModel, useAgent } from '@/app/chat/LayoutClient';
 import ModelSelector from './ModelSelector';
 import OcrBenchmarkModal from './OcrBenchmarkModal';
@@ -109,6 +109,7 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
   };
 
   const handleDeleteDocument = async (docId: string) => {
+    if (!confirm('Are you sure you want to remove this document from the knowledge base?')) return;
     try {
       const response = await fetch('/api/documents/delete', {
         method: 'POST',
@@ -126,6 +127,24 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
     } catch (err: any) {
       console.error(err);
       alert(`Error deleting document: ${err.message}`);
+    }
+  };
+
+  const handleViewDocument = async (docId: string) => {
+    try {
+      const res = await fetch(`/api/documents/view?documentId=${docId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.signedUrl) {
+          window.open(data.signedUrl, '_blank');
+        }
+      } else {
+        const data = await res.json();
+        alert(`Failed to open document: ${data.error}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error viewing document: ${err.message}`);
     }
   };
 
@@ -524,6 +543,15 @@ export default function ChatWindow({ chatId, chatTitle, agentId, initialMessages
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* View / Download Original File */}
+                    <button
+                      onClick={() => handleViewDocument(doc.id)}
+                      className="p-1 rounded-lg text-neutral-500 hover:text-indigo-400 hover:bg-neutral-800 transition-colors cursor-pointer"
+                      title="View / Download original document"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+
                     {/* OCR Benchmark Button */}
                     <button
                       onClick={() => {

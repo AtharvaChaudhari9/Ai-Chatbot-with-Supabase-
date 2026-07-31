@@ -875,14 +875,24 @@ export default function AgentModal({ isOpen, onClose, agentId, onSaveSuccess }: 
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteKB(doc.id)}
-                          className="p-2 rounded-xl border border-transparent hover:border-neutral-900 text-neutral-500 hover:text-red-400 cursor-pointer hover:bg-neutral-900 transition-all shrink-0"
-                          title="Remove document from agent knowledge"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleViewDocument(doc.id)}
+                            className="p-2 rounded-xl border border-transparent hover:border-neutral-900 text-neutral-400 hover:text-indigo-400 cursor-pointer hover:bg-neutral-900 transition-all"
+                            title="View / Download original document"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteKB(doc.id)}
+                            className="p-2 rounded-xl border border-transparent hover:border-neutral-900 text-neutral-500 hover:text-red-400 cursor-pointer hover:bg-neutral-900 transition-all"
+                            title="Remove document from agent knowledge"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
