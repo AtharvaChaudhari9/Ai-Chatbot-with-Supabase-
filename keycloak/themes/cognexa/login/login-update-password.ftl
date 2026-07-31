@@ -79,17 +79,9 @@
                     sessionStorage.clear();
                     localStorage.clear();
                 }
-                // Clear cookies
-                var cookies = document.cookie.split(";");
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = cookies[i];
-                    var eqPos = cookie.indexOf("=");
-                    var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-                    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-                }
                 var origin = window.location.origin;
-                // Redirect directly to /login?prompt=login to bypass unauthenticated logout screens & force fresh credentials + MFA
-                window.location.href = origin + '/login?prompt=login';
+                // Redirect through server route /api/auth/logout-reset which clears HTTP-only session cookies and lands on /login
+                window.location.href = origin + '/api/auth/logout-reset';
             }
 
             function handlePasswordSubmit(e) {
