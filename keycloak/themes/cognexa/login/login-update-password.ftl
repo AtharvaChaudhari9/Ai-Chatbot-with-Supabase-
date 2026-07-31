@@ -75,8 +75,9 @@
 
         <script>
             function redirectToLogin() {
-                var loginUrl = "${(url.loginUrl!'/realms/chatbot-realm/protocol/openid-connect/auth?client_id=chatbot-frontend&response_type=code&scope=openid&redirect_uri=' + encodeURIComponent(window.location.origin + '/api/auth/callback/keycloak'))?js_string}";
-                window.location.href = loginUrl;
+                var origin = window.location.origin;
+                // Redirect cleanly to Cognexa login route
+                window.location.href = origin + '/login';
             }
 
             function handlePasswordSubmit(e) {
@@ -101,7 +102,7 @@
 
                 errBadge.classList.add('hidden');
                 
-                // Show modal after submission
+                // Show modal after form submission completes
                 e.preventDefault();
                 var form = document.getElementById('kc-passwd-update-form');
                 var submitBtn = document.getElementById('btn-submit-pw');
@@ -116,7 +117,6 @@
                 }).then(function(res) {
                     document.getElementById('password-success-modal').classList.remove('hidden');
                 }).catch(function(err) {
-                    // Fallback to normal form submit if fetch blocked
                     form.submit();
                 });
 
