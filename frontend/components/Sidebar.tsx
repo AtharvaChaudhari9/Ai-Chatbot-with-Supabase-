@@ -390,6 +390,7 @@ export default function Sidebar({
 
   const handleLogout = async () => {
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('mfa_verified');
       sessionStorage.removeItem('mfa_verified');
     }
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
