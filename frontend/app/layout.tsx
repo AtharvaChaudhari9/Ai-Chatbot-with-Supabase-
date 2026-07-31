@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SessionProvider } from "next-auth/react";
+import SessionSync from "@/components/SessionSync";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,8 +27,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-import { SessionProvider } from "next-auth/react";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,6 +39,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SessionProvider>
+          <SessionSync />
           {children}
         </SessionProvider>
       </body>
