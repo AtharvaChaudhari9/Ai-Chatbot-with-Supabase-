@@ -41,7 +41,17 @@ export async function POST(req: Request) {
     const tokenData = await tokenRes.json();
     const adminToken = tokenData.access_token;
 
-    // 2. Lookup user by email in chatbot-realm
+    // 2. Ensure resetPasswordAllowed is enabled on chatbot-realm
+    await fetch(`${keycloakInternalUrl}/admin/realms/chatbot-realm`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ resetPasswordAllowed: true }),
+    });
+
+    // 3. Lookup user by email in chatbot-realm
     const lookupRes = await fetch(
       `${keycloakInternalUrl}/admin/realms/chatbot-realm/users?email=${encodeURIComponent(email)}`,
       {
@@ -74,7 +84,7 @@ export async function POST(req: Request) {
     const targetUser = usersList[0];
     const keycloakUUID = targetUser.id;
 
-    // 3. Trigger secure execute-actions-email with UPDATE_PASSWORD action
+    // 4. Trigger secure execute-actions-email with UPDATE_PASSWORD action
     const emailRes = await fetch(
       `${keycloakInternalUrl}/admin/realms/chatbot-realm/users/${keycloakUUID}/execute-actions-email`,
       {
