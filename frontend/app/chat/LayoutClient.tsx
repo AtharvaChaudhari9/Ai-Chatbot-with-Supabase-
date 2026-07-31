@@ -1,33 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useState, createContext, useContext, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
+import { usePathname } from 'next/navigation';
 import AgentModal from '@/components/AgentModal';
-import MultiAgentBar from '@/components/MultiAgentBar';
-import DynamicHeader from '@/components/DynamicHeader';
-import { Sparkles, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
-import { notifyLoginSuccess } from '@/components/SessionSync';
 
-// Context Exports
 interface SidebarContextType {
   isOpen: boolean;
   toggle: () => void;
-}
-
-interface ModelContextType {
-  model: string;
-  setModel: (m: string) => void;
-  localUrl: string;
-  setLocalUrl: (url: string) => void;
-  localModel: string;
-  setLocalModel: (m: string) => void;
-}
-
-interface AgentContextType {
-  agents: any[];
-  refreshAgents: () => void;
-  openAgentModal: (id?: string) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType>({
@@ -35,14 +15,35 @@ const SidebarContext = createContext<SidebarContextType>({
   toggle: () => {},
 });
 
+export const useSidebar = () => useContext(SidebarContext);
+
+export type ModelType = 'gemini' | 'local';
+
+interface ModelContextType {
+  model: ModelType;
+  setModel: (model: ModelType) => void;
+  localUrl: string;
+  setLocalUrl: (url: string) => void;
+  localModel: string;
+  setLocalModel: (model: string) => void;
+}
+
 const ModelContext = createContext<ModelContextType>({
-  model: 'gemini-1.5-flash',
+  model: 'gemini',
   setModel: () => {},
-  localUrl: 'http://localhost:11434',
+  localUrl: 'http://127.0.0.1:11434',
   setLocalUrl: () => {},
-  localModel: '',
+  localModel: 'llama3.2',
   setLocalModel: () => {},
 });
+
+export const useModel = () => useContext(ModelContext);
+
+interface AgentContextType {
+  agents: any[];
+  refreshAgents: () => void;
+  openAgentModal: (agentId?: string | null) => void;
+}
 
 const AgentContext = createContext<AgentContextType>({
   agents: [],
@@ -50,53 +51,41 @@ const AgentContext = createContext<AgentContextType>({
   openAgentModal: () => {},
 });
 
-export const useSidebar = () => useContext(SidebarContext);
-export const useModel = () => useContext(ModelContext);
 export const useAgent = () => useContext(AgentContext);
-export const useAgents = () => useContext(AgentContext);
 
-interface LayoutClientProps {
-  children: React.ReactNode;
-  chats: any[];
-  currentChatId?: string;
-  userEmail?: string;
-  defaultName?: string;
-  defaultImage?: string;
-  initialNickname?: string;
-  initialAvatarUrl?: string;
-  initialMfaEnabled?: boolean;
-}
-
-export default function LayoutClient({
-  children,
+export default function ChatLayoutClient({
   chats,
-  currentChatId,
-  userEmail = 'user@cognexa.ai',
-  defaultName = 'User',
-  defaultImage = '',
+  userEmail,
+  defaultName,
+  defaultImage,
   initialNickname,
   initialAvatarUrl,
-  initialMfaEnabled = false,
-}: LayoutClientProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
-
-  const [model, setModel] = useState('gemini-1.5-flash');
-  const [localUrl, setLocalUrl] = useState('http://localhost:11434');
-  const [localModel, setLocalModel] = useState('');
+  initialMfaEnabled,
+  children,
+}: {
+  chats: any[];
+  userEmail?: string;
+  defaultName: string;
+  defaultImage: string;
+  initialNickname: string | null;
+  initialAvatarUrl: string | null;
+  initialMfaEnabled: boolean;
+  children: React.ReactNode;
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [model, setModelVal] = useState<ModelType>('gemini');
+  const [localUrl, setLocalUrlVal] = useState('http://127.0.0.1:11434');
+  const [localModel, setLocalModelVal] = useState('llama3.2');
 
   const [agents, setAgents] = useState<any[]>([]);
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [editAgentId, setEditAgentId] = useState<string | null>(null);
 
-  // MFA states with localStorage support for multi-tab persistence
+  // MFA states and verifications
   const [isMfaEnabled, setIsMfaEnabled] = useState(initialMfaEnabled);
   const [mfaVerified, setMfaVerified] = useState(() => {
     if (typeof window !== 'undefined') {
-      return (
-        localStorage.getItem('mfa_verified') === 'true' ||
-        sessionStorage.getItem('mfa_verified') === 'true'
-      );
+      return sessionStorage.getItem('mfa_verified') === 'true';
     }
     return false;
   });
@@ -104,17 +93,6 @@ export default function LayoutClient({
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState('');
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-
-  // Sync mfaVerified across tabs on storage events
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'mfa_verified' && e.newValue === 'true') {
-        setMfaVerified(true);
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   const checkMfaStatus = async () => {
     try {
@@ -145,10 +123,8 @@ export default function LayoutClient({
         body: JSON.stringify({ code: otpCode }),
       });
       if (res.ok) {
-        localStorage.setItem('mfa_verified', 'true');
         sessionStorage.setItem('mfa_verified', 'true');
         setMfaVerified(true);
-        notifyLoginSuccess();
       } else {
         const data = await res.json();
         setOtpError(data.error || 'Invalid code. Please try again.');
@@ -161,84 +137,151 @@ export default function LayoutClient({
     }
   };
 
-  const fetchAgents = async () => {
+  const pathname = usePathname();
+  const pathParts = pathname.split('/');
+  const currentChatId = pathParts[2]; // e.g., /chat/[id]
+
+  const toggle = () => setSidebarOpen((prev) => !prev);
+
+  const refreshAgents = async () => {
     try {
-      const res = await fetch('/api/agents');
-      if (res.ok) {
-        const data = await res.json();
-        setAgents(data);
+      const response = await fetch('/api/agents');
+      if (response.ok) {
+        const data = await response.json();
+        setAgents(data.agents || []);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Failed to fetch agents in layout:', err);
     }
   };
 
-  useEffect(() => {
-    fetchAgents();
-    checkMfaStatus();
-  }, []);
-
-  const openAgentModal = (id?: string) => {
-    setEditAgentId(id || null);
+  const openAgentModal = (agentId?: string | null) => {
+    setEditAgentId(agentId || null);
     setAgentModalOpen(true);
   };
 
-  // If MFA is enabled on user account but NOT yet verified in browser, render MFA verification overlay
-  if (isMfaEnabled && !mfaVerified) {
+  // Auto-close sidebar drawer when navigating on mobile devices only
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [pathname]);
+
+  // Safely initialize values from localStorage on mount
+  useEffect(() => {
+    const savedModel = localStorage.getItem('chat-model-preference');
+    if (savedModel === 'gemini' || savedModel === 'local') {
+      setModelVal(savedModel);
+    }
+    const savedUrl = localStorage.getItem('chat-local-url');
+    if (savedUrl) {
+      setLocalUrlVal(savedUrl);
+    }
+    const savedModelName = localStorage.getItem('chat-local-model');
+    if (savedModelName) {
+      setLocalModelVal(savedModelName);
+    }
+    
+    refreshAgents();
+    checkMfaStatus();
+  }, []);
+
+  const setModel = (val: ModelType) => {
+    setModelVal(val);
+    localStorage.setItem('chat-model-preference', val);
+  };
+
+  const setLocalUrl = (val: string) => {
+    setLocalUrlVal(val);
+    localStorage.setItem('chat-local-url', val);
+  };
+
+  const setLocalModel = (val: string) => {
+    setLocalModelVal(val);
+    localStorage.setItem('chat-local-model', val);
+  };
+
+  if (isMfaEnabled && !mfaVerified && !isMfaLoading) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#050505] text-neutral-400 px-4">
-        <div className="absolute top-[-20%] left-[-20%] h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-20%] h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none" />
+      <div className="relative flex h-[100dvh] w-full items-center justify-center bg-[#050505] text-neutral-200 px-4 overflow-hidden select-none font-sans">
+        {/* Glowing background spotlights */}
+        <div className="absolute top-[-20%] left-[-20%] h-[600px] w-[600px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none"></div>
+        <div className="absolute bottom-[-20%] right-[-20%] h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="z-10 flex flex-col items-center gap-5 text-center max-w-md w-full rounded-3xl border border-neutral-900 bg-neutral-950/80 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg ring-4 ring-indigo-950/50">
-            <ShieldCheck className="w-7 h-7 text-white" />
-          </div>
+        {/* Centered MFA Verification Card */}
+        <div data-testid="mfa-card" className="z-10 w-full max-w-[420px] max-h-[90dvh] overflow-y-auto rounded-3xl border border-neutral-900 bg-neutral-950/60 p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
+          <div className="flex flex-col items-center mb-5">
+            {/* Visual lock icon */}
+            <div className="h-14 w-14 rounded-2xl bg-indigo-650/10 border border-indigo-500/20 flex items-center justify-center mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-indigo-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 className="text-sm font-bold text-neutral-200 uppercase tracking-wider mb-5">Two-Factor Authentication</h3>
 
-          <div className="space-y-1.5">
-            <h2 className="text-xl font-bold text-white">Two-Factor Authentication Required</h2>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Enter the 6-digit verification code from your authenticator app to complete access to Cognexa AI.
+            {/* User Profile Preview */}
+            <div className="flex flex-col items-center gap-3 mb-5 bg-neutral-900/30 border border-neutral-900/60 rounded-2xl px-6 py-4 w-full max-w-[320px] shadow-inner">
+              {initialAvatarUrl || defaultImage ? (
+                <img 
+                  src={initialAvatarUrl || defaultImage} 
+                  alt="Profile" 
+                  className="h-16 w-16 rounded-full border border-neutral-800/80 object-cover shrink-0 select-none ring-2 ring-indigo-500/10 shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-neutral-850 flex items-center justify-center font-bold text-lg text-indigo-400 border border-neutral-800 uppercase shrink-0 select-none">
+                  {(initialNickname || defaultName || userEmail || '').substring(0, 2)}
+                </div>
+              )}
+              <div className="flex flex-col items-center min-w-0 text-center">
+                <span className="text-sm font-bold text-neutral-200 truncate max-w-[250px] leading-tight">
+                  {initialNickname || defaultName || 'User Account'}
+                </span>
+                <span className="text-[11px] text-neutral-550 truncate max-w-[250px] mt-1 leading-none">
+                  {userEmail}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-500 text-center font-semibold leading-relaxed">
+              Enter the 6-digit verification code from your Google Authenticator app to unlock your chatbot account.
             </p>
           </div>
 
-          <form onSubmit={handleVerifyLoginOtp} className="w-full space-y-4 pt-2">
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-bold tracking-wider text-neutral-500 uppercase">
-                6-Digit Authenticator Code
-              </label>
+          <form onSubmit={handleVerifyLoginOtp} className="space-y-5">
+            <div className="space-y-1.5">
               <input
                 type="text"
                 maxLength={6}
+                pattern="[0-9]*"
+                inputMode="numeric"
+                placeholder="••••••"
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="123456"
+                onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full text-center tracking-[0.75em] text-2xl font-bold rounded-xl border border-neutral-900 bg-neutral-900/40 py-4 text-neutral-200 placeholder-neutral-800 focus:border-neutral-800 focus:outline-none transition-colors"
                 autoFocus
-                className="w-full tracking-widest text-center text-lg font-mono rounded-xl border border-neutral-800 bg-neutral-900/60 py-3.5 text-white placeholder-neutral-700 focus:border-violet-500 focus:outline-none transition-colors"
+                data-testid="mfa-input"
               />
             </div>
 
             {otpError && (
-              <p className="text-xs text-red-400 bg-red-950/30 border border-red-950/50 rounded-lg p-2.5">
-                {otpError}
-              </p>
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-950/40 bg-red-950/15 text-red-400 p-3.5 text-xs font-semibold leading-relaxed animate-in fade-in duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                <span>{otpError}</span>
+              </div>
             )}
 
             <button
               type="submit"
-              disabled={isVerifyingOtp || otpCode.length !== 6}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 text-xs font-semibold transition-all shadow-md cursor-pointer"
+              disabled={isVerifyingOtp}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-650 hover:bg-indigo-600 text-sm text-white py-4 transition-colors font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50"
+              data-testid="mfa-submit"
             >
               {isVerifyingOtp ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Verifying Code...</span>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  Verifying...
                 </>
               ) : (
-                <>
-                  <span>Verify & Proceed to Cognexa</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
+                'Verify & Unlock'
               )}
             </button>
           </form>
@@ -248,48 +291,48 @@ export default function LayoutClient({
   }
 
   return (
-    <SidebarContext.Provider value={{ isOpen: sidebarOpen, toggle: toggleSidebar }}>
+    <SidebarContext.Provider value={{ isOpen: sidebarOpen, toggle }}>
       <ModelContext.Provider value={{ model, setModel, localUrl, setLocalUrl, localModel, setLocalModel }}>
-        <AgentContext.Provider value={{ agents, refreshAgents: fetchAgents, openAgentModal }}>
-          <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans antialiased">
+        <AgentContext.Provider value={{ agents, refreshAgents, openAgentModal }}>
+          <div className="flex h-[100dvh] w-full overflow-hidden bg-[#0a0a0a] relative">
+            {/* Mobile Backdrop Overlay */}
             {sidebarOpen && (
-              <div
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity"
+              <div 
                 onClick={() => setSidebarOpen(false)}
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
+                aria-hidden="true"
               />
             )}
-            <div className="flex flex-1 overflow-hidden relative">
-              <Sidebar
-                chats={chats}
-                currentChatId={currentChatId}
-                userEmail={userEmail}
-                defaultName={defaultName}
-                defaultImage={defaultImage}
-                initialNickname={initialNickname}
-                initialAvatarUrl={initialAvatarUrl}
-                initialMfaEnabled={initialMfaEnabled}
-                onMfaEnabled={() => {
-                  setIsMfaEnabled(true);
-                  localStorage.setItem('mfa_verified', 'true');
-                  sessionStorage.setItem('mfa_verified', 'true');
-                  setMfaVerified(true);
-                }}
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-              />
-              <main className="flex flex-1 flex-col h-full overflow-hidden min-w-0">
-                {children}
-              </main>
-            </div>
-            <AgentModal
-              isOpen={agentModalOpen}
-              onClose={() => setAgentModalOpen(false)}
-              agentId={editAgentId}
-              onAgentSaved={fetchAgents}
+            <Sidebar
+              chats={chats}
+              currentChatId={currentChatId}
+              userEmail={userEmail}
+              defaultName={defaultName}
+              defaultImage={defaultImage}
+              initialNickname={initialNickname}
+              initialAvatarUrl={initialAvatarUrl}
+              initialMfaEnabled={initialMfaEnabled}
+              onMfaEnabled={() => {
+                setIsMfaEnabled(true);
+                sessionStorage.setItem('mfa_verified', 'true');
+                setMfaVerified(true);
+              }}
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
             />
+            <main className="flex flex-1 flex-col h-full overflow-hidden min-w-0">
+              {children}
+            </main>
           </div>
+          <AgentModal
+            isOpen={agentModalOpen}
+            onClose={() => setAgentModalOpen(false)}
+            agentId={editAgentId}
+            onSaveSuccess={refreshAgents}
+          />
         </AgentContext.Provider>
       </ModelContext.Provider>
     </SidebarContext.Provider>
   );
 }
+

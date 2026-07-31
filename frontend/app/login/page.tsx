@@ -7,13 +7,14 @@ import { Sparkles, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
   useEffect(() => {
+    // Clear residual 2FA verification states on new login session
     if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('mfa_verified');
+
       const urlParams = new URLSearchParams(window.location.search);
       const isPromptLogin = urlParams.get('prompt') === 'login';
 
       if (isPromptLogin) {
-        localStorage.removeItem('mfa_verified');
-        sessionStorage.removeItem('mfa_verified');
         signIn("keycloak", { callbackUrl: "/chat", prompt: "login" });
       } else {
         signIn("keycloak", { callbackUrl: "/chat" });
