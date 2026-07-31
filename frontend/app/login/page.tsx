@@ -10,9 +10,16 @@ export default function LoginPage() {
     // Clear residual 2FA verification states on new login session
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('mfa_verified');
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPromptLogin = urlParams.get('prompt') === 'login';
+
+      if (isPromptLogin) {
+        signIn("keycloak", { callbackUrl: "/chat", prompt: "login" });
+      } else {
+        signIn("keycloak", { callbackUrl: "/chat" });
+      }
     }
-    // Automatically trigger sign-in with Keycloak on mount
-    signIn("keycloak", { callbackUrl: "/chat" });
   }, []);
 
   return (

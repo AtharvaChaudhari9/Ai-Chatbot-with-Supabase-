@@ -77,11 +77,19 @@
             function redirectToLogin() {
                 if (typeof window !== 'undefined') {
                     sessionStorage.clear();
+                    localStorage.clear();
+                }
+                // Clear cookies
+                var cookies = document.cookie.split(";");
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i];
+                    var eqPos = cookie.indexOf("=");
+                    var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
                 }
                 var origin = window.location.origin;
-                var postLogoutRedirect = encodeURIComponent(origin + '/login');
-                var keycloakLogoutUrl = origin + '/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=' + postLogoutRedirect;
-                window.location.href = keycloakLogoutUrl;
+                // Redirect directly to /login?prompt=login to bypass unauthenticated logout screens & force fresh credentials + MFA
+                window.location.href = origin + '/login?prompt=login';
             }
 
             function handlePasswordSubmit(e) {
