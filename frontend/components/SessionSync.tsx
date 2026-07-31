@@ -11,25 +11,11 @@ export default function SessionSync() {
 
   useEffect(() => {
     const isAuthPage = pathname === '/' || pathname === '/login';
+    const isChatPage = pathname.startsWith('/chat');
 
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search);
-      const isForceLogout =
-        sessionStorage.getItem('cognexa_force_logout') === 'true' ||
-        searchParams.get('prompt') === 'login';
-
-      if (isForceLogout) {
-        if (status === 'authenticated') {
-          signOut({ redirect: false });
-        }
-        return;
-      }
-    }
-
-    // If session is active on landing or login page and not force logged out, redirect to /chat
-    if (isAuthPage && status === 'authenticated') {
-      router.replace('/chat');
-      return;
+    // If user is currently on /chat and authenticated, broadcast login success to all other tabs
+    if (isChatPage && status === 'authenticated') {
+      notifyLoginSuccess();
     }
 
     // Set up BroadcastChannel and Storage listener for multi-tab sync
@@ -44,14 +30,12 @@ export default function SessionSync() {
         }
 
         if (event.data === 'login_success' || event.data === 'session_changed') {
-          const isForceLogout = sessionStorage.getItem('cognexa_force_logout') === 'true';
-          if (!isForceLogout) {
-            update().then((newSession) => {
-              if (newSession?.user && isAuthPage) {
-                router.replace('/chat');
-              }
-            });
-          }
+          sessionStorage.removeItem('cognexa_force_logout');
+          update().then((newSession) => {
+            if (newSession?.user && isAuthPage) {
+              router.replace('/chat');
+            }
+          });
         }
       };
     }
@@ -63,28 +47,45 @@ export default function SessionSync() {
         return;
       }
 
-      if (e.key === 'cognexa_login_event' && isAuthPage) {
-        const isForceLogout = sessionStorage.getItem('cognexa_force_logout') === 'true';
-        if (!isForceLogout) {
-          update().then((newSession) => {
-            if (newSession?.user) {
-              router.replace('/chat');
-            }
-          });
-        }
-      }
-    };
-
-    const handleFocus = () => {
-      const isForceLogout = typeof window !== 'undefined' && sessionStorage.getItem('cognexa_force_logout') === 'true';
-      if (isAuthPage && !isForceLogout) {
+      if (e.key === 'cognexa_login_event') {
+        sessionStorage.removeItem('cognexa_force_logout');
         update().then((newSession) => {
-          if (newSession?.user) {
+          if (newSession?.user && isAuthPage) {
             router.replace('/chat');
           }
         });
       }
     };
+
+    const handleFocus = () => {
+      update().then((newSession) => {
+        if (newSession?.user) {
+          sessionStorage.removeItem('cognexa_force_logout');
+          if (isAuthPage) {
+            router.replace('/chat');
+          }
+        }
+      });
+    };
+
+    // On initial mount or page load of landing/login, check if user session is active
+    if (isAuthPage) {
+      update().then((currentSession) => {
+        if (currentSession?.user) {
+          sessionStorage.removeItem('cognexa_force_logout');
+          router.replace('/chat');
+        } else {
+          const searchParams = new URLSearchParams(window.location.search);
+          const isForceLogout =
+            sessionStorage.getItem('cognexa_force_logout') === 'true' ||
+            searchParams.get('prompt') === 'login';
+
+          if (isForceLogout && status === 'authenticated') {
+            signOut({ redirect: false });
+          }
+        }
+      });
+    }
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('focus', handleFocus);
