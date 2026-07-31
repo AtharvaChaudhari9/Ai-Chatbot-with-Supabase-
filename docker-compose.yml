@@ -17,9 +17,6 @@ services:
       - backend
     restart: unless-stopped
 
-
-
-
   backend:
     container_name: ai-chatbot-backend
     build:
@@ -50,13 +47,6 @@ services:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: all
-#              capabilities: [gpu]
     restart: unless-stopped
 
   keycloak-db:
@@ -82,19 +72,16 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_PROXY: edge
-      KC_HOSTNAME: cognexa-ai.duckdns.org
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
+      KC_HTTP_ENABLED: "true"
     ports:
       - "8080:8080"
     volumes:
       - ./keycloak/themes:/opt/keycloak/themes
-
     depends_on:
       - keycloak-db
     restart: unless-stopped
-
-
 
 volumes:
   qdrant_storage:
@@ -103,4 +90,3 @@ volumes:
     name: ollama_models
   keycloak_db_data:
     name: keycloak_db_data
-
