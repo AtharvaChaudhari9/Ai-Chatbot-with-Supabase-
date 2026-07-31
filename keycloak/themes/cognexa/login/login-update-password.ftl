@@ -79,9 +79,16 @@
                     sessionStorage.clear();
                     localStorage.clear();
                 }
-                var origin = window.location.origin;
-                // Redirect through server route /api/auth/logout-reset which clears HTTP-only session cookies and lands on /login
-                window.location.href = origin + '/api/auth/logout-reset';
+                var loc = window.location;
+                var targetOrigin = loc.protocol + '//' + loc.hostname;
+                if (loc.port === '8080') {
+                    targetOrigin += ':3000';
+                } else if (loc.port && loc.port !== '80' && loc.port !== '443') {
+                    targetOrigin += ':' + loc.port;
+                }
+                
+                // Redirect to frontend route /api/auth/logout-reset on external frontend origin
+                window.location.href = targetOrigin + '/api/auth/logout-reset';
             }
 
             function handlePasswordSubmit(e) {
