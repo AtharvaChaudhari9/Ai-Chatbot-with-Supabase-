@@ -75,9 +75,13 @@
 
         <script>
             function redirectToLogin() {
+                if (typeof window !== 'undefined') {
+                    sessionStorage.clear();
+                }
                 var origin = window.location.origin;
-                // Redirect cleanly to Cognexa login route
-                window.location.href = origin + '/login';
+                var postLogoutRedirect = encodeURIComponent(origin + '/login');
+                var keycloakLogoutUrl = origin + '/realms/chatbot-realm/protocol/openid-connect/logout?client_id=chatbot-frontend&post_logout_redirect_uri=' + postLogoutRedirect;
+                window.location.href = keycloakLogoutUrl;
             }
 
             function handlePasswordSubmit(e) {
