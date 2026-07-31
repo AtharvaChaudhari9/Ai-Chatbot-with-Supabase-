@@ -26,7 +26,6 @@
     </script>
     
     <style>
-        /* Custom input check styles to prevent ugly default states */
         input[type="checkbox"] {
             accent-color: #4f46e5;
         }
@@ -44,12 +43,69 @@
         
         <#nested "form">
         
-        <!-- Error & Status Notifications mapping -->
+        <!-- Notifications & Success Popups mapping -->
         <#if displayMessage && message?has_content>
-            <div class="mt-5 flex items-start gap-3 rounded-xl border <#if message.type = 'error'>border-red-950/40 bg-red-950/15 text-red-400<#else>border-emerald-950/40 bg-emerald-950/15 text-emerald-400</#if> p-3.5 text-xs">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                <span class="font-medium">${message.summary}</span>
-            </div>
+            <#if message.type = 'success' || (message.summary?has_content && (message.summary?contains("updated") || message.summary?contains("changed") || message.summary?contains("Updated") || message.summary?contains("Changed")))>
+                <!-- Cognexa-Themed Success Popup Modal -->
+                <div id="cognexa-success-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div class="relative w-full max-w-sm rounded-3xl border border-neutral-800 bg-neutral-950 p-7 text-center shadow-2xl">
+                        <!-- Cross (X) Button -->
+                        <button type="button" onclick="handleCloseModal()" className="cursor-pointer" class="absolute top-4 right-4 rounded-full p-1.5 text-neutral-400 hover:bg-neutral-900 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+
+                        <!-- Glowing Check Circle Icon -->
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 ring-4 ring-emerald-500/20 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+
+                        <h3 class="text-lg font-bold text-white">Password Changed Successfully</h3>
+                        <p class="text-xs text-neutral-300 mt-2 leading-relaxed">
+                            Your password has been updated successfully. You will now be redirected to the login page.
+                        </p>
+
+                        <!-- OK Button -->
+                        <button type="button" onclick="handleCloseModal()" class="w-full rounded-xl bg-violet-600 hover:bg-violet-500 text-white py-3 text-xs font-semibold transition-all shadow-md mt-6 cursor-pointer">
+                            OK
+                        </button>
+                    </div>
+                </div>
+
+                <script>
+                    function handleCloseModal() {
+                        var targetUrl = "${(url.loginUrl!url.loginAction)?js_string}";
+                        // Strips stale message parameters from history so banner does not stay on login screen
+                        if (window.history && window.history.replaceState) {
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
+                        window.location.href = targetUrl;
+                    }
+                </script>
+            <#else>
+                <!-- Notification Banner with Close Button & Polished Sentence -->
+                <div id="cognexa-msg-banner" class="mt-5 flex items-start justify-between gap-3 rounded-xl border <#if message.type = 'error'>border-red-950/40 bg-red-950/15 text-red-400<#else>border-emerald-950/40 bg-emerald-950/15 text-emerald-400</#if> p-3.5 text-xs">
+                    <div class="flex items-start gap-2.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                        <span class="font-medium">
+                            <#if message.summary?has_content && (message.summary?contains("email") || message.summary?contains("Email") || message.summary?contains("instructions") || message.summary?contains("sent"))>
+                                An email containing your secure password reset link has been sent to your email address.
+                            <#else>
+                                ${message.summary}
+                            </#if>
+                        </span>
+                    </div>
+                    <button type="button" onclick="dismissBanner()" class="text-neutral-400 hover:text-white transition-colors shrink-0 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+
+                <script>
+                    function dismissBanner() {
+                        var banner = document.getElementById('cognexa-msg-banner');
+                        if (banner) banner.style.display = 'none';
+                    }
+                </script>
+            </#if>
         </#if>
     </div>
 
