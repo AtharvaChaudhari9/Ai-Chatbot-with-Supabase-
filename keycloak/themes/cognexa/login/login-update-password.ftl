@@ -74,10 +74,25 @@
         </div>
 
         <script>
+            // Ensure form.action replaces internal container IDs with public browser host
+            (function sanitizeFormAction() {
+                try {
+                    var form = document.getElementById('kc-passwd-update-form');
+                    if (form && form.action) {
+                        var u = new URL(form.action, window.location.href);
+                        u.hostname = window.location.hostname;
+                        if (window.location.port) {
+                            u.port = window.location.port;
+                        }
+                        form.action = u.toString();
+                    }
+                } catch(e) {}
+            })();
+
             function redirectToLogin() {
                 if (typeof window !== 'undefined') {
-                    sessionStorage.clear();
-                    localStorage.clear();
+                    sessionStorage.setItem('cognexa_force_logout', 'true');
+                    localStorage.setItem('cognexa_logout_event', Date.now().toString());
                 }
                 var loc = window.location;
                 var targetOrigin = loc.protocol + '//' + loc.hostname;
@@ -87,7 +102,7 @@
                     targetOrigin += ':' + loc.port;
                 }
                 
-                // Redirect to frontend route /api/auth/logout-reset on external frontend origin
+                // Redirect directly to frontend /api/auth/logout-reset to clear NextAuth cookies and land on /login?prompt=login
                 window.location.href = targetOrigin + '/api/auth/logout-reset';
             }
 
@@ -113,21 +128,32 @@
 
                 errBadge.classList.add('hidden');
                 
-                // Show modal after form submission completes
                 e.preventDefault();
                 var form = document.getElementById('kc-passwd-update-form');
                 var submitBtn = document.getElementById('btn-submit-pw');
                 submitBtn.disabled = true;
                 submitBtn.innerText = 'Updating...';
 
+                // Ensure action URL uses public browser domain/IP instead of container ID
+                var actionUrl = form.action;
+                try {
+                    var u = new URL(actionUrl, window.location.href);
+                    u.hostname = window.location.hostname;
+                    if (window.location.port) {
+                        u.port = window.location.port;
+                    }
+                    actionUrl = u.toString();
+                } catch(e) {}
+
                 var formData = new FormData(form);
-                fetch(form.action, {
+                fetch(actionUrl, {
                     method: 'POST',
                     body: formData,
                     redirect: 'follow'
                 }).then(function(res) {
                     document.getElementById('password-success-modal').classList.remove('hidden');
                 }).catch(function(err) {
+                    form.action = actionUrl;
                     form.submit();
                 });
 
