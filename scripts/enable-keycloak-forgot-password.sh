@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to enable Forgot Password (resetPasswordAllowed: true) in Keycloak chatbot-realm
+# Script to enable Forgot Password and Email Password Change Confirmation in Keycloak chatbot-realm
 
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8080}"
 ADMIN_USER="${KEYCLOAK_ADMIN:-admin}"
@@ -22,15 +22,19 @@ if [ -z "$ADMIN_TOKEN" ]; then
 fi
 
 echo "Successfully authenticated with Keycloak Admin API."
-echo "Enabling resetPasswordAllowed on chatbot-realm..."
+echo "Enabling resetPasswordAllowed & Email Event Notifications on chatbot-realm..."
 
 UPDATE_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "${KEYCLOAK_URL}/admin/realms/chatbot-realm" \
   -H "Authorization: Bearer ${ADMIN_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{"resetPasswordAllowed": true}')
+  -d '{
+    "resetPasswordAllowed": true,
+    "eventsEnabled": true,
+    "eventsListeners": ["jboss-logging", "email"]
+  }')
 
 if [ "$UPDATE_RESPONSE" -eq 204 ] || [ "$UPDATE_RESPONSE" -eq 200 ]; then
-  echo "SUCCESS: Forgot Password (resetPasswordAllowed) has been enabled for chatbot-realm!"
+  echo "SUCCESS: Forgot Password & Password Change Email Notifications enabled for chatbot-realm!"
 else
   echo "Failed to update realm. HTTP Status: $UPDATE_RESPONSE"
   exit 1

@@ -33,13 +33,15 @@ if [ -z "$ADMIN_TOKEN" ]; then
   exit 1
 fi
 
-echo "Configuring SMTP Server on chatbot-realm..."
+echo "Configuring SMTP Server & Email Event Notifications on chatbot-realm..."
 
 UPDATE_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X PUT "${KEYCLOAK_URL}/admin/realms/chatbot-realm" \
   -H "Authorization: Bearer ${ADMIN_TOKEN}" \
   -H "Content-Type: application/json" \
   -d "{
     \"resetPasswordAllowed\": true,
+    \"eventsEnabled\": true,
+    \"eventsListeners\": [\"jboss-logging\", \"email\"],
     \"smtpServer\": {
       \"host\": \"${SMTP_HOST}\",
       \"port\": \"${SMTP_PORT}\",
@@ -56,8 +58,8 @@ UPDATE_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X PUT "${KEYCLOAK_URL
 HTTP_STATUS=$(echo "$UPDATE_RESPONSE" | grep "HTTP_STATUS:" | cut -d':' -f2)
 
 if [ "$HTTP_STATUS" -eq 204 ] || [ "$HTTP_STATUS" -eq 200 ]; then
-  echo "SUCCESS: SMTP Server configured successfully for chatbot-realm!"
-  echo "Keycloak can now send password reset emails."
+  echo "SUCCESS: SMTP Server & Password Change Email Notifications configured for chatbot-realm!"
+  echo "Keycloak will now send password reset emails and password change confirmation emails."
 else
   echo "Failed to configure SMTP. HTTP Status: $HTTP_STATUS"
   echo "Details: $UPDATE_RESPONSE"

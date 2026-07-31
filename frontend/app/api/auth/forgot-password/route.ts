@@ -41,14 +41,18 @@ export async function POST(req: Request) {
     const tokenData = await tokenRes.json();
     const adminToken = tokenData.access_token;
 
-    // 2. Ensure resetPasswordAllowed is enabled on chatbot-realm
+    // 2. Ensure resetPasswordAllowed & email event notifications are enabled on chatbot-realm
     await fetch(`${keycloakInternalUrl}/admin/realms/chatbot-realm`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${adminToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ resetPasswordAllowed: true }),
+      body: JSON.stringify({
+        resetPasswordAllowed: true,
+        eventsEnabled: true,
+        eventsListeners: ['jboss-logging', 'email'],
+      }),
     });
 
     // 3. Lookup user by email in chatbot-realm
