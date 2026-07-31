@@ -45,11 +45,12 @@
         
         <!-- Notifications & Success Popups mapping -->
         <#if displayMessage && message?has_content>
-            <#assign isEmailSent = (message.summary?has_content && (message.summary?contains("email") || message.summary?contains("Email") || message.summary?contains("instructions") || message.summary?contains("sent")))>
-            <#assign isPasswordSuccess = (!isEmailSent && message.type = 'success') || (message.summary?has_content && (message.summary?contains("password") || message.summary?contains("Password") || message.summary?contains("account updated")) && !isEmailSent)>
+            <#assign msgText = (message.summary!'')?lower_case>
+            <#assign isEmailSent = (msgText?contains("email") || msgText?contains("instructions") || msgText?contains("sent"))>
+            <#assign isPasswordSuccess = (msgText?contains("password has been updated") || msgText?contains("password has been changed") || msgText?contains("account has been updated") || msgText?contains("password updated") || msgText?contains("password changed"))>
 
             <#if isPasswordSuccess>
-                <!-- Cognexa-Themed Success Popup Modal (Only after password is changed) -->
+                <!-- Cognexa-Themed Success Popup Modal (ONLY after form submission completes) -->
                 <div id="cognexa-success-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
                     <div class="relative w-full max-w-sm rounded-3xl border border-neutral-800 bg-neutral-950 p-7 text-center shadow-2xl">
                         <!-- Cross (X) Button -->
