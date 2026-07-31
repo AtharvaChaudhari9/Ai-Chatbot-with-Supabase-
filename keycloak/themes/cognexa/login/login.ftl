@@ -53,9 +53,7 @@
                     <label for="password" class="text-[10px] font-bold tracking-wider text-neutral-500 uppercase">
                         Password
                     </label>
-                    <#if realm.resetPasswordAllowed>
-                        <a href="${url.loginResetCredentialsUrl}" class="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300">Forgot?</a>
-                    </#if>
+                    <a href="${(url.loginResetCredentialsUrl!'/realms/chatbot-realm/login-actions/reset-credentials?client_id=chatbot-frontend')}" class="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300">Forgot password?</a>
                 </div>
                 <div class="relative flex items-center">
                     <!-- Lock Icon -->
