@@ -74,6 +74,7 @@ export default function Sidebar({
   const [isDisableMfaConfirmOpen, setIsDisableMfaConfirmOpen] = useState(false);
   const [isDisableMfaSuccessOpen, setIsDisableMfaSuccessOpen] = useState(false);
   const [mfaDisableError, setMfaDisableError] = useState('');
+  const [agentToDelete, setAgentToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -332,18 +333,22 @@ export default function Sidebar({
     }
   };
 
-  const handleDeleteAgent = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteAgent = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!confirm('Are you sure you want to delete this specialized assistant and all its knowledge files?')) return;
+    setAgentToDelete(id);
+  };
+
+  const confirmDeleteAgent = async () => {
+    if (!agentToDelete) return;
+    const id = agentToDelete;
+    setAgentToDelete(null);
     try {
       const response = await fetch(`/api/agents/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
         refreshAgents();
-      } else {
-        alert('Failed to delete assistant.');
       }
     } catch (err) {
       console.error('Failed to delete assistant:', err);
@@ -878,6 +883,37 @@ export default function Sidebar({
                 className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all cursor-pointer"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cognexa Confirm Delete Agent Modal */}
+      {agentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl border border-neutral-800 bg-neutral-950 p-7 shadow-2xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-950/40 text-red-400 border border-red-900/50 mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Delete Custom Assistant?</h3>
+            <p className="mt-2 text-xs text-neutral-400 leading-relaxed">
+              Are you sure you want to delete this specialized assistant and all its associated knowledge files? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAgentToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-neutral-800 text-xs font-semibold text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteAgent}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white transition-all shadow-md cursor-pointer"
+              >
+                Delete Assistant
               </button>
             </div>
           </div>
